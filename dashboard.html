@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Urânia +</title>
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-left">
+      <div class="logo-circle">📊</div>
+      <div class="top-titles">
+        <h1>Dashboard</h1>
+        <p>Métricas do chatbot (mensagens, anexos, resolução e top dúvidas)</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="pill-status">
+        <span class="pill-status-dot"></span>
+        <span>Backend online</span>
+      </div>
+      <div class="top-links">
+        <a href="/admin">Admin</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/widget" target="_blank">Abrir widget</a>
+        <a href="/docs" target="_blank">API Docs</a>
+        <a href="#" class="export-btn" id="export-excel-btn">📥 Exportar Excel</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="cards">
+      <div class="card">
+        <div class="label">Total de mensagens</div>
+        <div id="m_total" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Chats iniciados</div>
+        <div id="m_chats" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Taxa de resolução</div>
+        <div class="value"><span id="m_resolution">—</span><span class="unit">%</span></div>
+        <div class="bar"><div id="bar_resolution" class="barfill"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="label">PDFs enviados</div>
+        <div id="m_pdfs" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">GIFs enviados</div>
+        <div id="m_gifs" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Resolução pelo SIM</div>
+        <div id="m_resolved_yes" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Resolução pelo NÃO</div>
+        <div id="m_resolved_no" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Detratores</div>
+        <div id="m_detractors" class="value">—</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Direcionados para Suporte</div>
+        <div id="m_support" class="value">—</div>
+      </div>
+    </section>
+
+    <section class="panel modern-panel">
+      <div class="panel-head modern-head">
+        <div class="panel-header-content">
+          <div class="panel-icon">📄</div>
+          <div>
+            <div class="panel-title">Arquivos que não resolveram</div>
+            <div class="panel-sub">PDFs e GIFs enviados quando usuário clicou "Não"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modern-list" id="files_not_resolved">
+        <div class="empty-state" id="files_empty" style="display:none;">
+          <div class="empty-icon">📭</div>
+          <div class="empty-text">Nenhum arquivo registrado ainda</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel modern-panel">
+      <div class="panel-head modern-head">
+        <div class="panel-header-content">
+          <div class="panel-icon">❓</div>
+          <div>
+            <div class="panel-title">Perguntas mais frequentes</div>
+            <div class="panel-sub">Top 10 dúvidas (normalizadas)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modern-list" id="top_questions">
+        <div class="empty-state" id="questions_empty" style="display:none;">
+          <div class="empty-icon">💬</div>
+          <div class="empty-text">Nenhuma pergunta registrada ainda</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

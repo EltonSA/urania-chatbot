@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Widget do Chatbot</title>
+  <style>
+    :root{
+      --bg:#f8fafc;
+      --bg-secondary:#ffffff;
+      --card:#ffffff;
+      --text:#0f172a;
+      --text-light:#475569;
+      --primary:#0f172a;
+      --muted:#64748b;
+      --muted-light:#94a3b8;
+      --green:#1C8B3C;
+      --accent:#1C8B3C;
+      --accent-hover:#16a34a;
+      --accent-light:#f0fdf4;
+      --border:#e2e8f0;
+      --border-light:#f1f5f9;
+      --radius:16px;
+      --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;height:100%;}
+    body{
+      height:100vh;
+      width:100vw;
+      margin:0;
+      padding:0;
+      background:linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter","Roboto",sans-serif;
+      color:var(--primary);
+      display:flex;
+      align-items:stretch;
+      justify-content:stretch;
+      overflow:hidden;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .wrapper{
+      width:100%;
+      height:100%;
+      max-width:none;
+      background:var(--card);
+      border-radius:0;
+      box-shadow:none;
+      border:none;
+      padding:20px 24px 24px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      backdrop-filter:blur(10px);
+    }
+
+    .top-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding-bottom:18px;
+      border-bottom:2px solid var(--border-light);
+      margin-bottom:4px;
+    }
+    .top-left{display:flex;align-items:center;gap:12px;}
+    .avatar{
+      width:48px;height:48px;border-radius:14px;
+      background:linear-gradient(135deg, #1C8B3C 0%, #16a34a 100%);
+      display:flex;align-items:center;justify-content:center;
+      font-size:24px;color:#fff;
+      overflow:hidden;
+      object-fit:cover;
+      box-shadow:0 4px 12px rgba(28,139,60,0.25);
+      transition:transform 0.2s ease;
+    }
+    .avatar:hover{
+      transform:scale(1.05);
+    }
+    .avatar img{
+      width:100%;height:100%;object-fit:cover;
+    }
+    .top-text-title{font-size:12px;color:var(--muted);margin:0;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;}
+    .top-text-name{font-size:20px;font-weight:700;margin:2px 0 0;color:var(--text);letter-spacing:-0.02em;}
+    .top-right{font-size:13px;color:var(--muted);font-weight:500;}
+
+    .chat-area{
+      margin-top:20px;
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      flex:1;
+      min-height:0;
+    }
+    .side-avatar{width:44px;margin-top:8px;display:flex;justify-content:center;flex-shrink:0;}
+    .side-avatar-inner{
+      width:40px;height:40px;border-radius:12px;
+      background:linear-gradient(135deg, #1C8B3C 0%, #16a34a 100%);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:22px;
+      overflow:hidden;
+      object-fit:cover;
+      box-shadow:0 2px 8px rgba(28,139,60,0.2);
+    }
+    .side-avatar-inner img{
+      width:100%;height:100%;object-fit:cover;
+    }
+
+    .chat-box{
+      flex:1;
+      border-radius:16px;
+      border:1px solid var(--border-light);
+      padding:16px 16px 14px;
+      background:var(--bg-secondary);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+      max-height:100%;
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    /* IMPORTANTE: scroll do chat aqui */
+    .messages{
+      padding:8px 6px 6px;
+      overflow-y:auto;
+      flex:1;
+      min-height:0;
+      scroll-behavior:smooth;
+    }
+    .messages::-webkit-scrollbar{width:6px;}
+    .messages::-webkit-scrollbar-track{background:transparent;}
+    .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    .messages::-webkit-scrollbar-thumb:hover{background:var(--muted-light);}
+
+    .msg-row{display:flex;margin-bottom:14px;animation:fadeIn 0.3s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+    .msg-row.bot{justify-content:flex-start;}
+    .msg-row.user{justify-content:flex-end;}
+
+    .bubble{
+      max-width:85%;
+      padding:12px 16px;
+      border-radius:18px;
+      font-size:15px;
+      line-height:1.5;
+      word-wrap:break-word;
+      white-space:pre-wrap;
+      transition:transform 0.2s ease;
+    }
+    .bubble:hover{
+      transform:translateY(-1px);
+    }
+    .bubble.bot{
+      background:linear-gradient(135deg, var(--green) 0%, var(--accent-hover) 100%);
+      color:#ffffff;
+      border-bottom-left-radius:6px;
+      box-shadow:0 2px 8px rgba(28,139,60,0.2);
+    }
+    .bubble.user{
+      background:var(--card);
+      border:1.5px solid var(--border);
+      border-bottom-right-radius:6px;
+      color:var(--text);
+      box-shadow:0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .attachments{margin-top:10px;}
+
+    /* GIF inline */
+    .gif-thumb{
+      width:100%;
+      max-width:700px;
+      border-radius:14px;
+      display:block;
+      margin-top:8px;
+      border:1px solid rgba(148,163,184,0.7);
+      cursor:zoom-in;
+      background:#fff;
+    }
+
+    /* ===== PDF INLINE NO CHAT ===== */
+    .pdf-inline{
+      margin-top:10px;
+      width:100%;
+      max-width:720px;
+      background:#ffffff;
+      border:1px solid rgba(148,163,184,0.7);
+      border-radius:14px;
+      overflow:hidden;
+    }
+
+    .pdf-inline-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 12px;
+      background:#f0fdf4;
+      border-bottom:1px solid rgba(226,232,240,0.9);
+      gap:10px;
+    }
+
+    .pdf-inline-title{
+      font-size:13px;
+      font-weight:800;
+      color:#065f46;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:60%;
+    }
+
+    .pdf-inline-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .pdf-inline-btn{
+      border:none;
+      background:#1C8B3C;
+      color:#fff;
+      padding:6px 12px;
+      font-size:12px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .pdf-inline-btn.secondary{
+      background:#ffffff;
+      color:#1C8B3C;
+      border:1px solid #1C8B3C;
+    }
+
+    .pdf-inline-frame{
+      width:100%;
+      height:420px;
+      border:none;
+      background:#f9fafb;
+      display:block;
+    }
+
+    /* input */
+    .input-row{
+      display:flex;
+      align-items:stretch;
+      border-radius:16px;
+      border:2px solid var(--border);
+      overflow:hidden;
+      background:var(--card);
+      box-shadow:0 4px 12px rgba(0,0,0,0.06);
+      transition:all 0.2s ease;
+      min-height:56px;
+    }
+    .input-row:focus-within{
+      border-color:var(--accent);
+      box-shadow:0 6px 20px rgba(28,139,60,0.2);
+      transform:translateY(-1px);
+    }
+    .input-row input{
+      flex:1;border:none;padding:16px 20px;font-size:16px;outline:none;
+      background:transparent;color:var(--text);
+      line-height:1.5;
+    }
+    .input-row input::placeholder{color:var(--muted-light);font-weight:400;}
+    .input-row button{
+      border:none;padding:0 32px;background:linear-gradient(135deg, var(--green) 0%, var(--accent-hover) 100%);
+      color:#fff;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;
+      transition:all 0.2s ease;box-shadow:0 2px 8px rgba(28,139,60,0.25);
+      min-width:120px;
+    }
+    .input-row button:hover{
+      transform:translateY(-1px);
+      box-shadow:0 4px 16px rgba(28,139,60,0.35);
+    }
+    .input-row button:active{transform:translateY(0);}
+    .input-row button:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+    .status-line{font-size:13px;color:var(--muted);text-align:right;margin-top:6px;font-weight:500;padding-right:4px;}
+
+    /* Indicador "escrevendo..." */
+    .typing-indicator{
+      background:var(--green);
+      color:#f9fafb;
+      padding:10px 14px;
+      display:flex;
+      gap:4px;
+      align-items:center;
+    }
+    .typing-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:rgba(255,255,255,0.7);
+      animation:typing 1.4s infinite;
+    }
+    .typing-dot:nth-child(2){animation-delay:0.2s;}
+    .typing-dot:nth-child(3){animation-delay:0.4s;}
+    @keyframes typing{
+      0%,60%,100%{transform:translateY(0);opacity:0.7;}
+      30%{transform:translateY(-8px);opacity:1;}
+    }
+
+    /* Botão WhatsApp */
+    .whatsapp-support-btn{
+      display:inline-block;
+      margin-top:12px;
+      padding:10px 16px;
+      background:#25D366;
+      color:#fff;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:600;
+      font-size:14px;
+      transition:all 0.2s ease;
+      box-shadow:0 2px 8px rgba(37,211,102,0.3);
+    }
+    .whatsapp-support-btn:hover{
+      background:#20BA5A;
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(37,211,102,0.4);
+    }
+
+    @media (max-width:720px){
+      body{padding:0;}
+      .wrapper{padding:16px;}
+      .top-right{display:none;}
+      .chat-area{flex-direction:column;}
+      .side-avatar{display:none;}
+      .pdf-inline-title{max-width:55%;}
+      .pdf-inline-frame{height:360px;}
+    }
+
+    /* MODAIS */
+    .modal-overlay{
+      position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+      background:rgba(15,23,42,0.55);z-index:50;
+      padding:16px;
+    }
+    .modal-overlay.open{display:flex;}
+    .modal-content{
+      width:100%;
+      max-width:1000px;
+      max-height:92vh;
+      background:#020617;
+      border-radius:14px;
+      padding:10px 10px 12px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.6);
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    .modal-close{
+      position:absolute;top:8px;right:10px;border:none;background:rgba(15,23,42,0.8);
+      color:#e5e7eb;border-radius:999px;width:30px;height:30px;cursor:pointer;
+      font-size:18px;display:flex;align-items:center;justify-content:center;
+    }
+    .modal-caption{margin-top:8px;font-size:12px;color:#e5e7eb;text-align:center;}
+
+    #gif-modal img{
+      width:100%;
+      max-width:1200px;
+      max-height:80vh;
+      border-radius:10px;
+      display:block;
+      object-fit:contain;
+    }
+
+    #pdf-modal .modal-content{background:#ffffff;}
+    #pdf-modal-frame{
+      width:100%;
+      height:80vh;
+      border:none;
+      display:block;
+      border-radius:10px;
+      background:#f9fafb;
+    }
+    #pdf-modal-actions{
+      margin-top:10px;
+      text-align:center;
+      width:100%;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    #pdf-modal-download{
+      padding:10px 14px;background:#1C8B3C;color:white;border-radius:999px;
+      text-decoration:none;font-size:13px;font-weight:800;
+      border:1px solid rgba(0,0,0,0.08);
+      box-shadow:0 10px 18px rgba(28,139,60,0.18);
+    }
+
+    /* ====== RESOLUÇÃO (SIM/NÃO) ====== */
+    .resolve-card{
+      margin-top:12px;
+      background:var(--card);
+      border:2px solid var(--border-light);
+      border-radius:16px;
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      box-shadow:0 2px 8px rgba(0,0,0,0.04);
+    }
+    .resolve-text{font-size:14px;color:var(--text);font-weight:600;letter-spacing:-0.01em;}
+    .resolve-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+    .resolve-btn{
+      border:none;border-radius:12px;padding:10px 18px;font-size:14px;
+      font-weight:600;cursor:pointer;transition:all 0.2s ease;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    }
+    .resolve-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    }
+    .resolve-btn:active{transform:translateY(0);}
+    .resolve-yes{background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);color:#fff;}
+    .resolve-no{background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:#fff;}
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="top-row">
+      <div class="top-left">
+        <div class="avatar"><img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" /></div>
+        <div>
+          <p class="top-text-title">Assistente Virtual</p>
+          <p class="top-text-name">Urânia +</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="side-avatar"><div class="side-avatar-inner"><img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" /></div></div>
+
+      <div class="chat-box">
+        <div id="chat-messages" class="messages"></div>
+
+        <div class="input-row">
+          <input id="chat-input" type="text" placeholder="Digite sua mensagem aqui..." />
+          <button id="chat-send">Enviar</button>
+        </div>
+
+        <div id="chat-status" class="status-line">Pronto para responder.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA GIF -->
+  <div id="gif-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button id="gif-modal-close" class="modal-close">&times;</button>
+      <img id="gif-modal-img" src="" alt="GIF ampliado" />
+      <div id="gif-modal-caption" class="modal-caption"></div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA PDF -->
+  <div id="pdf-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button id="pdf-modal-close" class="modal-close">&times;</button>
+      <iframe id="pdf-modal-frame" src=""></iframe>
+      <div id="pdf-modal-actions">
+        <a id="pdf-modal-download" href="#" download>Baixar PDF</a>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const chatMessages = document.getElementById("chat-messages");
+  const chatInput = document.getElementById("chat-input");
+  const chatSend = document.getElementById("chat-send");
+  const chatStatus = document.getElementById("chat-status");
+
+  const gifModal = document.getElementById("gif-modal");
+  const gifModalImg = document.getElementById("gif-modal-img");
+  const gifModalCaption = document.getElementById("gif-modal-caption");
+  const gifModalClose = document.getElementById("gif-modal-close");
+
+  const pdfModal = document.getElementById("pdf-modal");
+  const pdfModalFrame = document.getElementById("pdf-modal-frame");
+  const pdfModalDownload = document.getElementById("pdf-modal-download");
+  const pdfModalClose = document.getElementById("pdf-modal-close");
+
+  let chatHistory = [];
+
+  function scrollToBottom(){
+    chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior:"smooth" });
+  }
+
+  function getOrCreateSessionId(){
+    let sessionId = localStorage.getItem("chat_session_id");
+    if(!sessionId){
+      const raw = (crypto.randomUUID ? crypto.randomUUID() : (String(Date.now()) + Math.random()));
+      sessionId = raw.toString().replaceAll("-", "");
+      localStorage.setItem("chat_session_id", sessionId);
+    }
+    return sessionId;
+  }
+
+  // ====== MODAL GIF ======
+  function openGifModal(url, name){
+    gifModalImg.src = url;
+    gifModalCaption.textContent = name || "Pré-visualização do GIF";
+    gifModal.classList.add("open");
+  }
+  function closeGifModal(){
+    gifModal.classList.remove("open");
+    gifModalImg.src = "";
+    gifModalCaption.textContent = "";
+  }
+  gifModalClose.addEventListener("click", closeGifModal);
+  gifModal.addEventListener("click", (e)=>{ if(e.target === gifModal) closeGifModal(); });
+
+  // ====== MODAL PDF ======
+  function openPdfModal(url, name){
+    pdfModalFrame.src = url + "#toolbar=1";
+    pdfModalDownload.href = url;
+    pdfModalDownload.download = name || "arquivo.pdf";
+    pdfModal.classList.add("open");
+  }
+  function closePdfModal(){
+    pdfModal.classList.remove("open");
+    pdfModalFrame.src = "";
+  }
+  pdfModalClose.addEventListener("click", closePdfModal);
+  pdfModal.addEventListener("click", (e)=>{ if(e.target === pdfModal) closePdfModal(); });
+
+  // ====== UI ======
+  function renderAttachments(containerEl, attachments=[]){
+    if(!attachments || attachments.length === 0) return;
+
+    const attDiv = document.createElement("div");
+    attDiv.className = "attachments";
+
+    attachments.forEach(att=>{
+      if(att.type === "gif"){
+        const img = document.createElement("img");
+        img.src = att.url;
+        img.alt = att.name || "GIF";
+        img.className = "gif-thumb";
+        img.addEventListener("click", ()=>openGifModal(att.url, att.name));
+        attDiv.appendChild(img);
+      }
+
+      if(att.type === "pdf"){
+        const pdfWrap = document.createElement("div");
+        pdfWrap.className = "pdf-inline";
+
+        const header = document.createElement("div");
+        header.className = "pdf-inline-header";
+
+        const title = document.createElement("div");
+        title.className = "pdf-inline-title";
+        title.textContent = att.name || "Documento PDF";
+
+        const actions = document.createElement("div");
+        actions.className = "pdf-inline-actions";
+
+        const openBtn = document.createElement("button");
+        openBtn.className = "pdf-inline-btn";
+        openBtn.textContent = "Ampliar";
+        openBtn.onclick = ()=>openPdfModal(att.url, att.name);
+
+        const downloadBtn = document.createElement("a");
+        downloadBtn.href = att.url;
+        downloadBtn.download = "";
+        downloadBtn.textContent = "Baixar";
+        downloadBtn.className = "pdf-inline-btn secondary";
+
+        actions.appendChild(openBtn);
+        actions.appendChild(downloadBtn);
+
+        header.appendChild(title);
+        header.appendChild(actions);
+
+        const iframe = document.createElement("iframe");
+        iframe.className = "pdf-inline-frame";
+        iframe.src = att.url + "#toolbar=1&view=FitH";
+
+        pdfWrap.appendChild(header);
+        pdfWrap.appendChild(iframe);
+
+        attDiv.appendChild(pdfWrap);
+      }
+    });
+
+    containerEl.appendChild(attDiv);
+  }
+
+  // Indicador "escrevendo..."
+  function showTypingIndicator(){
+    const row = document.createElement("div");
+    row.className = "msg-row bot typing-indicator-row";
+    row.id = "typing-indicator";
+
+    const avatarDiv = document.createElement("div");
+    avatarDiv.className = "side-avatar";
+    const avatarInner = document.createElement("div");
+    avatarInner.className = "side-avatar-inner";
+    const avatarImg = document.createElement("img");
+    avatarImg.src = "https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg";
+    avatarImg.alt = "Avatar";
+    avatarInner.appendChild(avatarImg);
+    avatarDiv.appendChild(avatarInner);
+    row.appendChild(avatarDiv);
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble bot typing-indicator";
+    bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    row.appendChild(bubble);
+    chatMessages.appendChild(row);
+    scrollToBottom();
+    return row;
+  }
+
+  function removeTypingIndicator(){
+    const indicator = document.getElementById("typing-indicator");
+    if(indicator) indicator.remove();
+  }
+
+  // Efeito de digitação em tempo real
+  function typeText(element, text, speed = 30, callback){
+    element.textContent = "";
+    let i = 0;
+    const timer = setInterval(() => {
+      if(i < text.length){
+        element.textContent += text.charAt(i);
+        i++;
+        scrollToBottom();
+      } else {
+        clearInterval(timer);
+        if(callback) callback();
+      }
+    }, speed);
+  }
+
+  function addMessage(who, text, attachments=[], needsHumanSupport=false, animateTyping=false){
+    const row = document.createElement("div");
+    row.className = "msg-row " + who;
+
+    // Adiciona avatar para mensagens do bot
+    if (who === "bot") {
+      const avatarDiv = document.createElement("div");
+      avatarDiv.className = "side-avatar";
+      const avatarInner = document.createElement("div");
+      avatarInner.className = "side-avatar-inner";
+      const avatarImg = document.createElement("img");
+      avatarImg.src = "https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg";
+      avatarImg.alt = "Avatar";
+      avatarInner.appendChild(avatarImg);
+      avatarDiv.appendChild(avatarInner);
+      row.appendChild(avatarDiv);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble " + who;
+    
+    if(animateTyping && who === "bot" && text){
+      // Inicia vazio, será preenchido pela animação
+      bubble.textContent = "";
+      typeText(bubble, text, 30, () => {
+        renderAttachments(bubble, attachments);
+        if(needsHumanSupport){
+          addWhatsAppButton(bubble);
+        }
+      });
+    } else {
+      bubble.textContent = text || "";
+      renderAttachments(bubble, attachments);
+      if(needsHumanSupport){
+        addWhatsAppButton(bubble);
+      }
+    }
+
+    row.appendChild(bubble);
+    chatMessages.appendChild(row);
+    scrollToBottom();
+    return bubble;
+  }
+
+  // Botão WhatsApp para suporte humano
+  function addWhatsAppButton(container){
+    const whatsappBtn = document.createElement("a");
+    whatsappBtn.href = "https://wa.me/5541998306017";
+    whatsappBtn.target = "_blank";
+    whatsappBtn.className = "whatsapp-support-btn";
+    whatsappBtn.innerHTML = '💬 Falar com Suporte no WhatsApp';
+    container.appendChild(whatsappBtn);
+  }
+
+  // ====== FEEDBACK (RESOLVEU?) ======
+  async function sendFeedback(resolved){
+    const sessionId = getOrCreateSessionId();
+    const res = await fetch("/chat/feedback", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ session_id: sessionId, resolved: !!resolved })
+    });
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      throw new Error(t || "Falha ao enviar feedback");
+    }
+  }
+
+  function addResolveCard(afterBubbleEl){
+    const card = document.createElement("div");
+    card.className = "resolve-card";
+
+    const left = document.createElement("div");
+    left.className = "resolve-text";
+    left.textContent = "Conseguiu resolver o seu problema?";
+
+    const actions = document.createElement("div");
+    actions.className = "resolve-actions";
+
+    const yesBtn = document.createElement("button");
+    yesBtn.className = "resolve-btn resolve-yes";
+    yesBtn.textContent = "✅ Sim";
+
+    const noBtn = document.createElement("button");
+    noBtn.className = "resolve-btn resolve-no";
+    noBtn.textContent = "❌ Não";
+
+    actions.appendChild(yesBtn);
+    actions.appendChild(noBtn);
+
+    card.appendChild(left);
+    card.appendChild(actions);
+
+    const lock = ()=>{ yesBtn.disabled = true; noBtn.disabled = true; };
+
+    yesBtn.addEventListener("click", async ()=>{
+      lock();
+      try{
+        await sendFeedback(true);
+        card.innerHTML = `<div class="resolve-text">Obrigado! ✅ Registramos sua resposta.</div>`;
+        setTimeout(()=>card.remove(), 1500);
+      }catch(e){
+        console.error(e);
+        card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
+        setTimeout(()=>card.remove(), 2200);
+      }
+    });
+
+    noBtn.addEventListener("click", async ()=>{
+      lock();
+      try{
+        await sendFeedback(false);
+        card.innerHTML = `<div class="resolve-text">Obrigado! ❗ Vamos melhorar para a próxima.</div>`;
+        setTimeout(()=>card.remove(), 1700);
+      }catch(e){
+        console.error(e);
+        card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
+        setTimeout(()=>card.remove(), 2200);
+      }
+    });
+
+    afterBubbleEl.appendChild(card);
+    scrollToBottom();
+  }
+
+  // ====== CHAT ======
+  async function sendChat(){
+    const text = chatInput.value.trim();
+    if(!text) return;
+
+    addMessage("user", text);
+    chatHistory.push({ role:"user", content:text });
+
+    chatInput.value = "";
+    chatInput.focus();
+    chatSend.disabled = true;
+    chatStatus.textContent = "Consultando IA...";
+    
+    // Mostra indicador "escrevendo..."
+    const typingRow = showTypingIndicator();
+
+    try{
+      const sessionId = getOrCreateSessionId();
+
+      const res = await fetch("/chat", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionId,   // compatível com o backend
+          history: chatHistory
+        })
+      });
+
+      if(!res.ok){
+        const errText = await res.text().catch(()=> "");
+        throw new Error(errText || "Erro no servidor");
+      }
+
+      const data = await res.json();
+      
+      // Remove indicador "escrevendo..."
+      removeTypingIndicator();
+
+      // Adiciona mensagem com animação de digitação
+      const botBubble = addMessage(
+        "bot", 
+        data.reply || "", 
+        data.attachments || [],
+        data.needs_human_support || false,
+        true // animar digitação
+      );
+      chatHistory.push({ role:"assistant", content: data.reply || "" });
+
+      if (data.should_ask_resolution === true) {
+        // Aguarda um pouco para a animação terminar antes de mostrar o card
+        setTimeout(() => {
+          addResolveCard(botBubble);
+        }, (data.reply || "").length * 30 + 500);
+      }
+
+      chatStatus.textContent = "Pronto para outra pergunta.";
+    } catch(err){
+      console.error("Erro no chat:", err);
+      removeTypingIndicator();
+      addMessage("bot", "Houve um erro ao falar com o servidor.");
+      chatStatus.textContent = "Erro de conexão.";
+    } finally {
+      chatSend.disabled = false;
+    }
+  }
+
+  chatSend.addEventListener("click", (e)=>{ e.preventDefault(); sendChat(); });
+  chatInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){ e.preventDefault(); sendChat(); }
+  });
+
+  // mensagem inicial
+  addMessage(
+    "bot",
+    "Olá! 👋 Sou o assistente virtual deste ambiente de testes.\n" +
+    "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
+  );
+</script>
+</body>
+</html>

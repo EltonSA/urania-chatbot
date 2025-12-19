@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+bot/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+# Mas mantém a pasta data (apenas ignora o conteúdo)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Uploads (opcional - descomente se não quiser versionar)
+# uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# FastAPI
+.pytest_cache/
+.coverage
+htmlcov/
+
