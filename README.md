@@ -140,6 +140,132 @@ A aplicação estará disponível em:
 └── README.md                 # Este arquivo
 ```
 
+## 🤖 Como a IA Funciona e Seleciona Arquivos
+
+O sistema usa um processo inteligente em duas etapas para decidir qual arquivo enviar ao cliente:
+
+### Etapa 1: Busca de Arquivos Relevantes (Sistema)
+
+Quando o cliente envia uma mensagem, o sistema busca automaticamente arquivos relevantes no banco de dados:
+
+1. **Extração de palavras-chave**: O sistema extrai palavras da mensagem do cliente (mínimo 3 caracteres)
+   - Exemplo: "Como alterar minha senha?" → ["como", "alterar", "minha", "senha"]
+
+2. **Busca no banco de dados**: Procura nos campos `título` e `tags` dos arquivos
+   - Usa busca parcial (LIKE) - encontra "senha" em "alterar senha", "esqueci senha", etc.
+   - Limita a 8 arquivos mais relevantes
+
+3. **Fallback**: Se não encontrar nada, retorna os 8 arquivos mais recentes
+
+### Etapa 2: Decisão da IA (OpenAI GPT)
+
+A IA recebe a lista pré-filtrada de arquivos e decide quais enviar:
+
+1. **Análise contextual**: A IA analisa:
+   - O contexto da conversa
+   - A pergunta específica do cliente
+   - Os arquivos disponíveis na lista
+   - Qual arquivo melhor responde à dúvida
+
+2. **Decisão inteligente**: A IA escolhe:
+   - **GIFs** para passo a passo visual e demonstrações rápidas
+   - **PDFs** para documentação completa e materiais extensos
+   - **Nenhum arquivo** se a pergunta não requer material adicional
+
+3. **Resposta estruturada**: A IA retorna um JSON com:
+   - Texto da resposta
+   - Lista de arquivos a anexar (se houver)
+   - Se deve perguntar se resolveu o problema
+
+### Exemplo Prático
+
+```
+Cliente: "Esqueci minha senha, como recupero?"
+
+1. Sistema busca arquivos:
+   ✅ Encontra: "001_02_Como_faco_se_esquecer_a_senha.gif" (tags: "senha, recuperar, esqueci")
+   ✅ Encontra: "alterar_senha.pdf" (tags: "senha, alterar")
+
+2. Sistema envia para IA:
+   - Lista de arquivos encontrados
+   - Mensagem do cliente
+   - Histórico da conversa
+
+3. IA decide:
+   - GIF é mais adequado (passo a passo visual)
+   - Responde: "Vou te mostrar como recuperar sua senha!"
+   - Retorna: {"attachments": [{"type": "gif", "file_id": 5}]}
+
+4. Sistema envia o GIF para o cliente
+```
+
+## 📝 Dicas para Cadastrar Arquivos
+
+Para que a IA encontre e selecione os arquivos corretos, siga estas dicas:
+
+### 1. Títulos Descritivos ✅
+
+**❌ Evite:**
+- "arquivo1.pdf"
+- "documento.pdf"
+- "gif_001.gif"
+
+**✅ Use:**
+- "Como alterar senha"
+- "Tutorial de elaboração de horário"
+- "Passo a passo para recuperar senha"
+
+### 2. Tags Relevantes ✅
+
+Adicione palavras-chave relacionadas ao conteúdo do arquivo:
+
+**Exemplo para um arquivo sobre senha:**
+```
+Tags: senha, login, autenticação, recuperar, alterar, acesso
+```
+
+**Exemplo para um arquivo sobre horário:**
+```
+Tags: horário, turno, turma, grade, elaboração, criação
+```
+
+### 3. Organização por Contexto ✅
+
+- Use tags consistentes para arquivos relacionados
+- Agrupe arquivos do mesmo tema com tags similares
+- Mantenha uma nomenclatura padronizada
+
+### 4. Quando Usar GIF vs PDF
+
+**Use GIF quando:**
+- For um tutorial passo a passo visual
+- Precisar mostrar uma demonstração rápida
+- O conteúdo for curto e visual
+
+**Use PDF quando:**
+- For documentação completa
+- O material for extenso
+- Precisar de um guia detalhado
+
+### 5. Boas Práticas
+
+1. **Seja específico**: Títulos como "Como fazer X" são melhores que "Documento sobre X"
+2. **Use sinônimos nas tags**: Adicione variações de palavras (ex: "senha", "password", "acesso")
+3. **Organize por tema**: Agrupe arquivos relacionados com tags comuns
+4. **Revise regularmente**: Verifique quais arquivos são mais usados no dashboard
+
+### Exemplo de Cadastro Ideal
+
+```
+Título: Como alterar minha senha de acesso
+Tipo: GIF
+Tags: senha, alterar, mudar, acesso, login, autenticação, conta
+
+Título: Guia completo de elaboração de horários
+Tipo: PDF
+Tags: horário, elaboração, criação, turno, turma, grade, planejamento
+```
+
 ## 🔐 Autenticação
 
 ### Login
@@ -266,6 +392,23 @@ O código antigo em `main.py` foi refatorado para uma estrutura modular. Para us
 ### Erro de autenticação
 - Verifique se o usuário e senha estão corretos no `.env`
 - Verifique se o token está sendo enviado corretamente no header
+
+## 💡 Dicas de Uso
+
+### Para Administradores
+
+1. **Cadastre arquivos com títulos claros**: A IA usa o título para encontrar arquivos relevantes
+2. **Adicione tags relevantes**: Quanto mais tags, melhor a busca
+3. **Monitore o dashboard**: Veja quais arquivos são mais usados e quais não resolveram problemas
+4. **Ajuste o prompt do sistema**: Personalize como a IA responde no painel admin
+5. **Revise perguntas frequentes**: Use a categorização automática para identificar temas recorrentes
+
+### Para Desenvolvedores
+
+- O sistema busca arquivos antes de enviar para a IA
+- A IA recebe apenas arquivos pré-filtrados (máximo 8)
+- A busca usa `LIKE` no título e tags (case-insensitive)
+- Arquivos são ordenados por data de criação (mais recentes primeiro)
 
 ## 🔧 Tecnologias Utilizadas
 
