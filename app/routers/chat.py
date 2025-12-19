@@ -64,8 +64,7 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         logger.info(f"Chamando OpenAI com modelo: {settings.OPENAI_MODEL}")
-        logger.debug(f"API Key presente: {bool(settings.OPENAI_API_KEY)}")
-        logger.debug(f"API Key prefix: {settings.OPENAI_API_KEY[:10] if settings.OPENAI_API_KEY else 'None'}...")
+        # Não logar informações sensíveis em produção
         
         completion = client.chat.completions.create(
             model=settings.OPENAI_MODEL,

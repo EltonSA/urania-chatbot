@@ -18,7 +18,8 @@ if settings.LOG_FILE:
     try:
         handlers.append(logging.FileHandler(settings.LOG_FILE))
     except Exception as e:
-        print(f"⚠️ Aviso: Não foi possível criar arquivo de log {settings.LOG_FILE}: {e}")
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Não foi possível criar arquivo de log {settings.LOG_FILE}: {e}")
         handlers.append(logging.StreamHandler())
 else:
     handlers.append(logging.StreamHandler())
@@ -32,21 +33,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cria aplicação FastAPI
+# Desabilita docs em produção (DEBUG=False)
+docs_url = "/docs" if settings.DEBUG else None
+redoc_url = "/redoc" if settings.DEBUG else None
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Sistema profissional de chatbot SaaS com gerenciamento de PDFs e GIFs",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=docs_url,
+    redoc_url=redoc_url
 )
 
 # CORS
+# Em produção, é recomendado ser mais restritivo
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"] if not settings.DEBUG else ["*"]
+allowed_headers = ["Content-Type", "Authorization", "X-Requested-With"] if not settings.DEBUG else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=allowed_methods,
+    allow_headers=allowed_headers,
 )
 
 # Rate limiting
@@ -60,12 +69,17 @@ async def startup_event():
     logger.info(f"Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Modo debug: {settings.DEBUG}")
     
+    # Valida configurações de produção
+    production_warnings = settings.validate_production_settings()
+    for warning in production_warnings:
+        logger.warning(warning)
+    
     # Verifica configurações importantes
     if not settings.OPENAI_API_KEY:
-        logger.warning("⚠️ OPENAI_API_KEY não configurada! O chat não funcionará.")
-        logger.warning("   Configure OPENAI_API_KEY no arquivo .env")
+        logger.warning("OPENAI_API_KEY não configurada! O chat não funcionará.")
+        logger.warning("Configure OPENAI_API_KEY no arquivo .env")
     else:
-        logger.info(f"✅ OPENAI_API_KEY configurada (modelo: {settings.OPENAI_MODEL})")
+        logger.info(f"OPENAI_API_KEY configurada (modelo: {settings.OPENAI_MODEL})")
     
     init_db()
     logger.info("Banco de dados inicializado")

@@ -62,6 +62,26 @@ class Settings(BaseSettings):
         db_path_str = str(db_path).replace("\\", "/")
         return f"sqlite:///{db_path_str}"
     
+    def validate_production_settings(self) -> List[str]:
+        """
+        Valida configurações críticas para produção
+        Retorna lista de avisos/erros
+        """
+        warnings = []
+        
+        if not self.DEBUG:
+            # Validações apenas em produção
+            if self.SECRET_KEY == "change-me-in-production":
+                warnings.append("⚠️ CRÍTICO: SECRET_KEY ainda está com valor padrão! Configure uma chave segura no .env")
+            
+            if self.ADMIN_PASSWORD == "admin":
+                warnings.append("⚠️ CRÍTICO: ADMIN_PASSWORD ainda está com valor padrão! Configure uma senha segura no .env")
+            
+            if not self.OPENAI_API_KEY:
+                warnings.append("⚠️ AVISO: OPENAI_API_KEY não configurada. O chat não funcionará.")
+        
+        return warnings
+    
     # OpenAI
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="Chave da API OpenAI")
     OPENAI_MODEL: str = Field(default="gpt-4o-mini", description="Modelo OpenAI a usar")
