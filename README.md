@@ -1,6 +1,5 @@
-# SaaS Chatbot - Sistema Profissional
+# SaaS Chatbot Urnânia
 
-Sistema profissional de chatbot SaaS com gerenciamento de PDFs e GIFs, desenvolvido com FastAPI.
 
 ## 🚀 Características
 
