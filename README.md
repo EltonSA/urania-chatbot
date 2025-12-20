@@ -28,8 +28,39 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 
 ## 📋 Pré-requisitos
 
+### Desenvolvimento Local
 - Python 3.8+
 - pip
+- 2GB RAM mínimo
+- 1GB espaço em disco
+
+### Produção (VPS/Servidor)
+
+#### Requisitos Mínimos
+- **CPU**: 1 core (2.0 GHz+)
+- **RAM**: 1GB (2GB recomendado)
+- **Disco**: 10GB espaço livre
+- **Sistema Operacional**: Linux (Ubuntu 20.04+ / Debian 11+ / CentOS 8+)
+- **Python**: 3.8 ou superior
+- **Conexão**: Internet estável para API OpenAI
+
+#### Requisitos Recomendados
+- **CPU**: 2 cores (2.4 GHz+)
+- **RAM**: 4GB
+- **Disco**: 20GB+ (SSD recomendado)
+- **Sistema Operacional**: Ubuntu 22.04 LTS ou Debian 12
+- **Python**: 3.10 ou superior
+- **Banco de Dados**: SQLite (padrão) ou PostgreSQL (para alta carga)
+- **Servidor Web**: Nginx como reverse proxy (recomendado)
+- **Process Manager**: PM2, Supervisor ou systemd
+
+#### Para Alta Carga (1000+ usuários simultâneos)
+- **CPU**: 4+ cores
+- **RAM**: 8GB+
+- **Disco**: 50GB+ SSD
+- **Banco de Dados**: PostgreSQL ou MySQL
+- **Load Balancer**: Nginx ou HAProxy
+- **Workers**: 4-8 workers Uvicorn
 
 ## 🔧 Instalação
 
@@ -97,6 +128,97 @@ A aplicação estará disponível em:
 - **Login**: http://localhost:8000/login
 - **API**: http://localhost:8000
 - **Documentação** (apenas em modo debug): http://localhost:8000/docs
+
+### Produção em VPS/Servidor
+
+#### Opção 1: Uvicorn Direto (Simples)
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+#### Opção 2: Com Nginx (Recomendado)
+
+**1. Configure Nginx** (`/etc/nginx/sites-available/urania`):
+```nginx
+server {
+    listen 80;
+    server_name seu-dominio.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**2. Execute a aplicação:**
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+```
+
+#### Opção 3: Com PM2 (Gerenciamento de Processos)
+
+**1. Instale PM2:**
+```bash
+npm install -g pm2
+```
+
+**2. Crie arquivo `ecosystem.config.js`:**
+```javascript
+module.exports = {
+  apps: [{
+    name: 'urania-chatbot',
+    script: 'uvicorn',
+    args: 'app.main:app --host 0.0.0.0 --port 8000 --workers 4',
+    interpreter: 'python3',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production'
+    }
+  }]
+}
+```
+
+**3. Inicie com PM2:**
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+
+#### Opção 4: Com systemd (Serviço Linux)
+
+**1. Crie arquivo `/etc/systemd/system/urania.service`:**
+```ini
+[Unit]
+Description=Urânia + Chatbot API
+After=network.target
+
+[Service]
+Type=simple
+User=seu-usuario
+WorkingDirectory=/caminho/para/projeto
+Environment="PATH=/caminho/para/venv/bin"
+ExecStart=/caminho/para/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**2. Ative o serviço:**
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable urania
+sudo systemctl start urania
+sudo systemctl status urania
+```
 
 ## 📁 Estrutura do Projeto
 
@@ -378,6 +500,72 @@ O código antigo em `main.py` foi refatorado para uma estrutura modular. Para us
 2. Use `uvicorn app.main:app` em vez de `uvicorn main:app`
 3. Configure o arquivo `.env` conforme descrito acima
 
+## 🚀 Deploy em Produção
+
+### Checklist de Deploy
+
+1. **Configuração do Ambiente**
+   - [ ] Python 3.8+ instalado
+   - [ ] Ambiente virtual criado e ativado
+   - [ ] Dependências instaladas (`pip install -r requirements.txt`)
+   - [ ] Arquivo `.env` configurado com todas as variáveis
+
+2. **Segurança**
+   - [ ] `SECRET_KEY` alterada (não usar valor padrão)
+   - [ ] `ADMIN_PASSWORD` alterada (não usar valor padrão)
+   - [ ] `DEBUG=False` configurado
+   - [ ] `CORS_ORIGINS` configurado apenas com domínios permitidos
+   - [ ] Firewall configurado (porta 8000 ou 80/443)
+
+3. **Banco de Dados**
+   - [ ] Diretório `data/` criado e com permissões corretas
+   - [ ] Banco de dados inicializado (criado automaticamente no primeiro acesso)
+
+4. **Uploads**
+   - [ ] Diretório `uploads/` criado e com permissões corretas
+   - [ ] Subdiretórios `uploads/pdfs/` e `uploads/gifs/` criados
+
+5. **Servidor Web (Opcional mas Recomendado)**
+   - [ ] Nginx instalado e configurado
+   - [ ] SSL/HTTPS configurado (Let's Encrypt recomendado)
+   - [ ] Reverse proxy configurado
+
+6. **Process Manager**
+   - [ ] PM2, Supervisor ou systemd configurado
+   - [ ] Auto-restart configurado
+   - [ ] Logs configurados
+
+### Estimativa de Recursos por Tráfego
+
+| Usuários Simultâneos | CPU | RAM | Disco | Workers |
+|---------------------|-----|-----|-------|---------|
+| 1-50 | 1 core | 1GB | 10GB | 2 |
+| 50-200 | 2 cores | 2GB | 20GB | 4 |
+| 200-500 | 2-4 cores | 4GB | 50GB | 4-6 |
+| 500-1000 | 4+ cores | 8GB | 100GB | 6-8 |
+| 1000+ | 8+ cores | 16GB+ | 200GB+ | 8+ |
+
+### Otimizações Recomendadas
+
+1. **Use PostgreSQL em vez de SQLite** para alta carga:
+   ```env
+   DATABASE_URL=postgresql://user:password@localhost/urania_db
+   ```
+
+2. **Configure cache** (opcional):
+   - Redis para cache de sessões
+   - Cache de arquivos estáticos no Nginx
+
+3. **Monitore recursos**:
+   - Use `htop` ou `top` para monitorar CPU/RAM
+   - Configure alertas de disco cheio
+   - Monitore logs de erro
+
+4. **Backup regular**:
+   - Banco de dados (`data/saas_chatbot.db`)
+   - Arquivos de upload (`uploads/`)
+   - Configurações (`.env`)
+
 ## 🐛 Troubleshooting
 
 ### Erro: "SECRET_KEY não configurada"
@@ -392,6 +580,12 @@ O código antigo em `main.py` foi refatorado para uma estrutura modular. Para us
 ### Erro de autenticação
 - Verifique se o usuário e senha estão corretos no `.env`
 - Verifique se o token está sendo enviado corretamente no header
+
+### Problemas de Performance
+- Aumente o número de workers: `--workers 4` ou mais
+- Use PostgreSQL em vez de SQLite para alta carga
+- Configure Nginx como reverse proxy
+- Monitore uso de memória e CPU
 
 ## 💡 Dicas de Uso
 
