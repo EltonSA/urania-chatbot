@@ -109,6 +109,12 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", description="Nível de log")
     LOG_FILE: Optional[str] = Field(default=None, description="Arquivo de log (opcional)")
     
+    # Rota raiz
+    ROOT_REDIRECT: Optional[str] = Field(
+        default=None,
+        description="Comportamento da rota raiz (/). Valores: 'widget', 'admin', 'dashboard', 'login', 'json' ou vazio (padrão: 'widget' em produção, 'json' em desenvolvimento)"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

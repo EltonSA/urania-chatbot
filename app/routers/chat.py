@@ -21,9 +21,47 @@ from app.utils import (
 )
 from app.models import FileModel, ChatEventModel
 from app.config import settings
+from app.openai_status import get_status, is_available, set_status
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/status")
+def chat_status():
+    """
+    Endpoint para verificar o status da conexão com OpenAI.
+    Usado pelo frontend para verificar se o chat está disponível.
+    Retorna mensagens genéricas para o usuário (sem detalhes técnicos).
+    """
+    status = get_status()
+    
+    # Se a mensagem de erro contém informações técnicas sobre API key, substitui por genérica
+    error_message = status.get("error_message")
+    if error_message:
+        # Filtra mensagens técnicas que não devem aparecer para o usuário
+        technical_keywords = [
+            "OPENAI_API_KEY",
+            "api_key",
+            "token.*inválido",
+            "token.*não autorizado",
+            "authentication.*error"
+        ]
+        
+        # Verifica se a mensagem contém informações técnicas
+        is_technical = any(
+            keyword.lower() in error_message.lower() 
+            for keyword in ["OPENAI_API_KEY", "api_key", "token inválido", "token não autorizado"]
+        )
+        
+        if is_technical:
+            return {
+                "available": False,
+                "error_message": "Serviço de IA temporariamente indisponível",
+                "last_check": status.get("last_check")
+            }
+    
+    return status
 
 
 @router.post("", response_model=ChatResponse)
@@ -32,10 +70,21 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     Endpoint principal do chat
     Processa mensagem do usuário e retorna resposta do bot
     """
-    if not settings.OPENAI_API_KEY:
+    # Verifica se a conexão OpenAI está disponível
+    if not is_available():
+        status = get_status()
+        error_msg = status.get("error_message", "Serviço de IA temporariamente indisponível")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="OPENAI_API_KEY não configurada no servidor."
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=error_msg
+        )
+    
+    if not settings.OPENAI_API_KEY:
+        # Log técnico para admin, mas mensagem genérica para usuário
+        logger.error("OPENAI_API_KEY não configurada no servidor")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Serviço de IA temporariamente indisponível"
         )
     
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -73,22 +122,57 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
         )
         raw = completion.choices[0].message.content
         logger.info("Resposta da OpenAI recebida com sucesso")
+        
+        # Registra requisição bem-sucedida
+        log_event(db, session_id, "openai_request_success")
+        
+        # Se chegou aqui, a conexão está funcionando - atualiza status para disponível
+        if not is_available():
+            set_status(True, None)
+            logger.info("✅ Conexão OpenAI restaurada!")
+            
     except Exception as e:
-        error_msg = str(e)
+        error_msg = str(e).lower()
         logger.error(f"Erro ao chamar OpenAI: {error_msg}", exc_info=True)
         
-        # Mensagens de erro mais específicas
-        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
-            detail = "Erro de autenticação com a API OpenAI. Verifique se a OPENAI_API_KEY está correta no arquivo .env"
-        elif "rate limit" in error_msg.lower():
+        # Determina o tipo de erro para registro
+        error_type = "unknown"
+        if "api_key" in error_msg or "authentication" in error_msg or "invalid" in error_msg:
+            error_type = "authentication"
+        elif "rate limit" in error_msg:
+            error_type = "rate_limit"
+        elif "insufficient_quota" in error_msg or "quota" in error_msg:
+            error_type = "quota"
+        elif "timeout" in error_msg or "connection" in error_msg:
+            error_type = "timeout"
+        
+        # Registra requisição com erro (inclui tipo de erro no content)
+        log_event(db, session_id, "openai_request_error", content=error_type)
+        
+        # Atualiza o status para indisponível quando houver erro
+        # Mensagens de erro mais específicas (mas genéricas para usuário)
+        if error_type == "authentication":
+            # Log técnico para admin
+            logger.error("Erro de autenticação com API OpenAI - token inválido ou não autorizado")
+            detail = "Serviço de IA temporariamente indisponível"
+            set_status(False, detail)
+        elif error_type == "rate_limit":
             detail = "Limite de requisições da API OpenAI atingido. Tente novamente mais tarde."
-        elif "insufficient_quota" in error_msg.lower():
+            set_status(False, detail)
+        elif error_type == "quota":
             detail = "Cota da API OpenAI insuficiente. Verifique seu plano na OpenAI."
+            set_status(False, detail)
+        elif error_type == "timeout":
+            detail = "Serviço OpenAI temporariamente indisponível"
+            set_status(False, detail)
         else:
-            detail = f"Erro ao chamar o modelo de IA: {error_msg}"
+            detail = "Serviço de IA temporariamente indisponível. Tente novamente mais tarde."
+            set_status(False, detail)
+        
+        logger.warning(f"⚠️ Status OpenAI atualizado para indisponível: {detail}")
         
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=detail
         )
 

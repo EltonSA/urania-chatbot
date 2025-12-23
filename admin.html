@@ -146,6 +146,217 @@ body {
     color: var(--primary);
 }
 
+.backup-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    color: #ffffff !important;
+    font-weight: 600;
+    border: 1px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(28, 139, 60, 0.2);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.backup-btn:hover {
+    background: linear-gradient(135deg, var(--accent-hover) 0%, #15803d 100%) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(28, 139, 60, 0.3);
+}
+
+.backup-btn:active {
+    transform: translateY(0);
+}
+
+.backup-btn.loading {
+    opacity: 1 !important;
+    cursor: wait !important;
+    pointer-events: none !important;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%) !important;
+    color: #ffffff !important;
+    animation: downloadPulse 1.5s ease-in-out infinite !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* Animação de download - Pulso */
+@keyframes downloadPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(28, 139, 60, 0.2);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.02);
+        box-shadow: 0 4px 16px rgba(28, 139, 60, 0.4);
+    }
+}
+
+/* Animação de brilho deslizante */
+.backup-btn.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.4) 50%, 
+        transparent 100%);
+    animation: downloadShimmer 2s ease-in-out infinite;
+    z-index: 1;
+}
+
+@keyframes downloadShimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Ícone de loading girando */
+.backup-btn.loading::after {
+    content: '⏳';
+    display: inline-block;
+    animation: downloadSpin 1.2s linear infinite;
+    margin-left: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes downloadSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ====== MODAL DE DOWNLOAD ====== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.backup-download-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.backup-download-modal.active {
+    display: flex;
+}
+
+.backup-download-content {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.backup-download-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.backup-download-spinner {
+    width: 80px;
+    height: 80px;
+    border: 6px solid var(--border-light);
+    border-top-color: var(--accent);
+    border-right-color: var(--accent);
+    border-radius: 50%;
+    animation: downloadSpin 1s linear infinite;
+    margin: 0 auto;
+}
+
+.backup-download-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+}
+
+.backup-download-message {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.backup-download-progress {
+    margin-top: 24px;
+    height: 6px;
+    background: var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.backup-download-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
+    border-radius: 10px;
+    width: 0%;
+    animation: progressPulse 1.5s ease-in-out infinite;
+    transition: width 0.3s ease;
+}
+
+@keyframes progressPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.backup-download-status {
+    font-size: 14px;
+    color: var(--muted-light);
+    margin-top: 16px;
+    font-weight: 500;
+}
+
 @media (max-width: 900px) {
     .topbar {
     flex-direction: column;
@@ -1071,6 +1282,7 @@ select:focus {
         <a href="/dashboard">Dashboard</a>
         <a href="/widget" target="_blank">Abrir widget</a>
         <a href="/docs" target="_blank">API Docs</a>
+        <a href="javascript:void(0)" id="btn-backup" class="backup-btn">💾 Fazer Backup</a>
       </div>
     </div>
   </header>
@@ -1265,6 +1477,21 @@ select:focus {
     <div class="file-viewer-body" id="file-viewer-body">
       <!-- Conteúdo será inserido aqui -->
     </div>
+  </div>
+</div>
+
+<!-- MODAL DE DOWNLOAD -->
+<div id="backup-download-modal" class="backup-download-modal">
+  <div class="backup-download-content">
+    <div class="backup-download-icon">
+      <div class="backup-download-spinner"></div>
+    </div>
+    <div class="backup-download-title" id="backup-modal-title">Criando Backup</div>
+    <div class="backup-download-message" id="backup-modal-message">Aguarde enquanto preparamos seu backup...</div>
+    <div class="backup-download-progress">
+      <div class="backup-download-progress-bar" id="backup-progress-bar"></div>
+    </div>
+    <div class="backup-download-status" id="backup-modal-status">Iniciando...</div>
   </div>
 </div>
 

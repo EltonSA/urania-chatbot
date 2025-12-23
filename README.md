@@ -94,6 +94,10 @@ Edite o arquivo `.env` e configure:
 - `OPENAI_API_KEY`: Sua chave da API OpenAI (obrigatório para chat)
 - `CORS_ORIGINS`: Origens permitidas (ajuste conforme necessário)
 - `DEBUG`: Defina como `False` em produção
+- `ROOT_REDIRECT`: Comportamento da rota raiz `/` (opcional):
+  - **Em produção** (DEBUG=False): padrão é redirecionar para `/widget`
+  - **Em desenvolvimento** (DEBUG=True): padrão é retornar JSON com informações
+  - Valores possíveis: `widget`, `admin`, `dashboard`, `login`, `json` ou vazio (usa padrão)
 
 **Para gerar uma SECRET_KEY segura:**
 ```python
@@ -106,6 +110,7 @@ print(secrets.token_urlsafe(32))
 - Defina `DEBUG=False`
 - Configure `CORS_ORIGINS` apenas com seus domínios permitidos
 - As documentações (`/docs` e `/redoc`) serão desabilitadas automaticamente quando `DEBUG=False`
+- A rota raiz `/` redireciona automaticamente para `/widget` em produção (pode ser configurado via `ROOT_REDIRECT`)
 
 ## 🏃 Executando
 
@@ -502,13 +507,32 @@ O código antigo em `main.py` foi refatorado para uma estrutura modular. Para us
 
 ## 🚀 Deploy em Produção
 
+### Validação Automática
+
+Antes de colocar em produção, execute o script de validação:
+
+```bash
+python scripts/validate_production.py
+```
+
+Este script verifica:
+- ✅ Configurações de segurança (SECRET_KEY, ADMIN_PASSWORD, DEBUG, CORS)
+- ✅ Diretórios necessários (data/, uploads/, backups/)
+- ✅ Dependências instaladas
+- ✅ Arquivo .env configurado
+
 ### Checklist de Deploy
+
+Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md).
+
+**Resumo rápido:**
 
 1. **Configuração do Ambiente**
    - [ ] Python 3.8+ instalado
    - [ ] Ambiente virtual criado e ativado
    - [ ] Dependências instaladas (`pip install -r requirements.txt`)
    - [ ] Arquivo `.env` configurado com todas as variáveis
+   - [ ] Execute `python scripts/validate_production.py` para validar
 
 2. **Segurança**
    - [ ] `SECRET_KEY` alterada (não usar valor padrão)
@@ -614,6 +638,26 @@ O código antigo em `main.py` foi refatorado para uma estrutura modular. Para us
 - **bcrypt (passlib)** - Hash de senhas
 - **Uvicorn** - Servidor ASGI de alta performance
 - **OpenPyXL** - Exportação de dados para Excel
+
+## 💾 Backup e Migração
+
+O sistema inclui ferramentas completas de backup e migração:
+
+- **Script de Backup**: `python scripts/backup.py` - Faz backup completo (banco, arquivos, configurações)
+- **Script de Restore**: `python scripts/restore.py <arquivo>` - Restaura backup completo
+- **Endpoint Web**: `/admin/backup` - Download de backup via interface (requer autenticação)
+
+Para documentação completa sobre backup e migração, consulte: [BACKUP_MIGRATION.md](BACKUP_MIGRATION.md)
+
+### Backup Rápido
+
+```bash
+# Fazer backup
+python scripts/backup.py
+
+# Restaurar backup
+python scripts/restore.py backups/urania_backup_YYYYMMDD_HHMMSS.tar.gz
+```
 
 ## 📄 Licença
 

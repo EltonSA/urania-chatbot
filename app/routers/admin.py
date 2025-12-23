@@ -17,6 +17,11 @@ from app.utils import get_setting, set_setting, ensure_upload_dirs
 from app.models import ChatEventModel, ChatSessionModel, FileModel, FileModel
 from app.config import settings
 import os
+import sys
+import subprocess
+import logging
+from pathlib import Path
+from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -130,6 +135,12 @@ def admin_stats(
     # Direcionamentos para suporte
     support_redirected = db.query(ChatEventModel).filter_by(event_type="support_redirected").count()
 
+    # Métricas de comunicação com OpenAI
+    openai_requests_success = db.query(ChatEventModel).filter_by(event_type="openai_request_success").count()
+    openai_requests_error = db.query(ChatEventModel).filter_by(event_type="openai_request_error").count()
+    openai_requests_total = openai_requests_success + openai_requests_error
+    openai_error_rate = round((openai_requests_error / openai_requests_total) * 100, 2) if openai_requests_total > 0 else 0.0
+
     # Perguntas mais frequentes - categorizadas por IA
     from app.utils import categorize_questions
     import logging
@@ -170,6 +181,10 @@ def admin_stats(
         "resolution_rate": resolution_rate,
         "files_not_resolved": files_not_resolved_list,
         "top_questions": top_questions,
+        "openai_requests_total": openai_requests_total,
+        "openai_requests_success": openai_requests_success,
+        "openai_requests_error": openai_requests_error,
+        "openai_error_rate": openai_error_rate,
     }
 
 
@@ -243,6 +258,12 @@ def export_excel(
     ws.append(["Resoluções (Sim)", stats["resolved_yes"]])
     ws.append(["Resoluções (Total)", stats["resolved_total"]])
     ws.append(["Taxa de resolução (%)", stats["resolution_rate"]])
+    ws.append([])  # Linha em branco
+    ws.append(["=== Métricas OpenAI ===", ""])
+    ws.append(["Total de requisições", stats.get("openai_requests_total", 0)])
+    ws.append(["Requisições com sucesso", stats.get("openai_requests_success", 0)])
+    ws.append(["Requisições com erro", stats.get("openai_requests_error", 0)])
+    ws.append(["Taxa de erro (%)", stats.get("openai_error_rate", 0)])
 
     ws2 = wb.create_sheet("Perguntas_frequentes")
     ws2.append(["Categoria", "Ocorrências", "Exemplos"])
@@ -260,4 +281,79 @@ def export_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=dashboard.xlsx"}
     )
+
+
+@router.get("/backup")
+def create_backup(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Cria um backup completo do sistema (banco, arquivos, configurações).
+    Requer autenticação.
+    Retorna arquivo .tar.gz para download.
+    """
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Executa o script de backup
+        script_path = Path(__file__).parent.parent.parent / "scripts" / "backup.py"
+        
+        if not script_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Script de backup não encontrado"
+            )
+        
+        # Executa o script
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minutos de timeout
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Erro ao executar backup: {result.stderr}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Erro ao criar backup: {result.stderr}"
+            )
+        
+        # Encontra o arquivo de backup mais recente
+        backup_dir = Path(__file__).parent.parent.parent / "backups"
+        backup_files = sorted(
+            backup_dir.glob("urania_backup_*.tar.gz"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        
+        if not backup_files:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Arquivo de backup não foi criado"
+            )
+        
+        latest_backup = backup_files[0]
+        
+        logger.info(f"Backup criado com sucesso: {latest_backup.name}")
+        
+        # Retorna o arquivo para download
+        return FileResponse(
+            path=str(latest_backup),
+            filename=latest_backup.name,
+            media_type="application/gzip"
+        )
+        
+    except subprocess.TimeoutExpired:
+        logger.error("Timeout ao criar backup")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Timeout ao criar backup. Tente novamente."
+        )
+    except Exception as e:
+        logger.error(f"Erro ao criar backup: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar backup: {str(e)}"
+        )
 

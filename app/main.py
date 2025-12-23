@@ -11,6 +11,8 @@ from app.config import settings
 from app.database import init_db
 from app.routers import auth, files, chat, admin, pages, public_files
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.utils import validate_openai_connection
+from app.openai_status import set_status
 
 # Configuração de logging
 handlers = []
@@ -78,8 +80,22 @@ async def startup_event():
     if not settings.OPENAI_API_KEY:
         logger.warning("OPENAI_API_KEY não configurada! O chat não funcionará.")
         logger.warning("Configure OPENAI_API_KEY no arquivo .env")
+        # Mensagem genérica para usuário (detalhes técnicos ficam nos logs)
+        set_status(False, "Serviço de IA temporariamente indisponível")
     else:
         logger.info(f"OPENAI_API_KEY configurada (modelo: {settings.OPENAI_MODEL})")
+        
+        # Valida conexão com OpenAI
+        logger.info("Validando conexão com API OpenAI...")
+        is_available, error_msg = validate_openai_connection()
+        
+        set_status(is_available, error_msg)
+        
+        if is_available:
+            logger.info("✅ Conexão com OpenAI validada com sucesso!")
+        else:
+            logger.error(f"❌ Falha na validação da conexão OpenAI: {error_msg}")
+            logger.error("⚠️ O chat será bloqueado até que a conexão seja restaurada")
     
     init_db()
     logger.info("Banco de dados inicializado")

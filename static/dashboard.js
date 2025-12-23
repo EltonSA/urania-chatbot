@@ -1,3 +1,10 @@
+// Desabilita console.log em produção (mantém apenas console.error)
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+if (isProduction) {
+    console.log = function() {}; // Remove logs em produção
+    console.debug = function() {}; // Remove debug em produção
+}
+
 // AUTENTICAÇÃO
 function getAuthToken() {
     return localStorage.getItem('admin_token');
@@ -63,6 +70,30 @@ async function loadStats(){
     const barResolutionEl = document.getElementById("bar_resolution");
     if(resolutionEl) resolutionEl.textContent = rate.toFixed(1);
     if(barResolutionEl) barResolutionEl.style.width = Math.max(0, Math.min(100, rate)) + "%";
+
+    // Métricas OpenAI
+    const mOpenaiTotal = document.getElementById("m_openai_total");
+    const mOpenaiErrors = document.getElementById("m_openai_errors");
+    const mOpenaiErrorRate = document.getElementById("m_openai_error_rate");
+    const barOpenaiError = document.getElementById("bar_openai_error");
+    
+    if(mOpenaiTotal) mOpenaiTotal.textContent = data.openai_requests_total ?? 0;
+    if(mOpenaiErrors) mOpenaiErrors.textContent = data.openai_requests_error ?? 0;
+    
+    const openaiErrorRate = Number(data.openai_error_rate ?? 0);
+    if(mOpenaiErrorRate) mOpenaiErrorRate.textContent = openaiErrorRate.toFixed(2);
+    if(barOpenaiError) {
+      barOpenaiError.style.width = Math.max(0, Math.min(100, openaiErrorRate)) + "%";
+      // Adiciona classe de cor baseada na taxa de erro
+      barOpenaiError.className = "barfill";
+      if(openaiErrorRate > 10) {
+        barOpenaiError.style.background = "#ef4444"; // Vermelho para taxa alta
+      } else if(openaiErrorRate > 5) {
+        barOpenaiError.style.background = "#f59e0b"; // Laranja para taxa média
+      } else {
+        barOpenaiError.style.background = "#10b981"; // Verde para taxa baixa
+      }
+    }
 
     // Perguntas mais frequentes - categorizadas
     const questionsList = document.getElementById("top_questions");

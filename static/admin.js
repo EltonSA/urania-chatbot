@@ -1,3 +1,10 @@
+// Desabilita console.log em produção (mantém apenas console.error)
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+if (isProduction) {
+    console.log = function() {}; // Remove logs em produção
+    console.debug = function() {}; // Remove debug em produção
+}
+
 // Aguarda DOM estar pronto
 let promptText, btnSavePrompt, promptStatus, uploadForm, uploadStatus, filesEmpty, filesList;
 let statPdfs, statGifs, statTotalSize;
@@ -44,14 +51,14 @@ function getAuthHeaders() {
     const token = getAuthToken();
     if (!token) {
         console.error("Token não encontrado no localStorage!");
-        console.log("localStorage completo:", {...localStorage});
+        // Log removido por segurança
         return {};
     }
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     };
-    console.log("Headers criados:", headers);
+    // Log removido por segurança (não expor token)
     return headers;
 }
 
@@ -79,9 +86,7 @@ if (!promptText) {
 }
 
 try {
-    console.log("Carregando prompt...");
     const headers = getAuthHeaders();
-    console.log("Headers:", headers);
     
     if (!headers.Authorization) {
         console.error("Token não encontrado nos headers!");
@@ -93,11 +98,8 @@ try {
         headers: headers
     });
     
-    console.log("Resposta prompt:", res.status, res.statusText);
-    
     if (!res.ok) {
         if (res.status === 401) {
-            console.log("Token inválido, redirecionando para login");
             window.location.href = '/login';
             return;
         }
@@ -107,8 +109,6 @@ try {
         return;
     }
     const data = await res.json();
-    console.log("Prompt carregado:", data.prompt ? `${data.prompt.length} caracteres` : "vazio");
-    console.log("Dados recebidos:", data);
     
     if (!promptText) {
         console.error("promptText não encontrado após carregar dados! Re-inicializando...");
@@ -119,7 +119,7 @@ try {
     }
     
     promptText.value = data.prompt || "";
-    console.log("Prompt definido no textarea:", promptText.value.length, "caracteres");
+    // Prompt carregado com sucesso
 } catch (err) {
     console.error("Erro ao carregar prompt:", err);
     alert(`Erro ao carregar prompt: ${err.message}`);
@@ -138,9 +138,7 @@ promptStatus.textContent = "Salvando...";
 promptStatus.classList.remove("error");
 
 try {
-    console.log("Salvando prompt...", value.length, "caracteres");
     const headers = getAuthHeaders();
-    console.log("Headers:", headers);
     
     const res = await fetch("/admin/prompt", {
     method: "PUT",
@@ -148,11 +146,8 @@ try {
     body: JSON.stringify({ prompt: value })
     });
 
-    console.log("Resposta save prompt:", res.status, res.statusText);
-
     if (!res.ok) {
         if (res.status === 401) {
-            console.log("Token inválido, redirecionando para login");
             window.location.href = '/login';
             return;
         }
@@ -164,7 +159,7 @@ try {
     }
 
     const data = await res.json();
-    console.log("Prompt salvo com sucesso:", data);
+    // Prompt salvo com sucesso
     promptStatus.textContent = "Prompt salvo com sucesso.";
     setTimeout(() => { promptStatus.textContent = ""; }, 2000);
 } catch (err) {
@@ -189,9 +184,7 @@ if (!filesList) {
 }
 
 try {
-    console.log("Carregando arquivos...");
     const headers = getAuthHeaders();
-    console.log("Headers:", headers);
     
     if (!headers.Authorization) {
         console.error("Token não encontrado nos headers!");
@@ -203,11 +196,8 @@ try {
         headers: headers
     });
     
-    console.log("Resposta arquivos:", res.status, res.statusText);
-    
     if (!res.ok) {
         if (res.status === 401) {
-            console.log("Token inválido, redirecionando para login");
             window.location.href = '/login';
             return;
         }
@@ -217,9 +207,7 @@ try {
         return;
     }
     const files = await res.json();
-    console.log("Arquivos recebidos:", files.length);
     if (files.length > 0) {
-        console.log("Primeiro arquivo:", files[0]);
     }
 
     // Armazena todos os arquivos para filtro
@@ -261,7 +249,7 @@ function renderFiles(files, searchTerm = "") {
     filesList.innerHTML = "";
 
     if (!filteredFiles || filteredFiles.length === 0) {
-        console.log("Nenhum arquivo encontrado" + (searchTerm ? " para: " + searchTerm : ""));
+        // Nenhum arquivo encontrado
         if (filesEmpty) {
             filesEmpty.textContent = searchTerm 
                 ? `Nenhum recurso encontrado para "${searchTerm}"`
@@ -272,7 +260,7 @@ function renderFiles(files, searchTerm = "") {
         return;
     }
 
-    console.log("Renderizando", filteredFiles.length, "arquivos" + (searchTerm ? " (filtrados)" : ""));
+    // Renderizando arquivos
     if (filesEmpty) filesEmpty.style.display = "none";
     if (filesList) filesList.style.display = "grid";
 
@@ -480,23 +468,17 @@ try {
 // Event listener do uploadForm será adicionado na função init()
 
 async function init() {
-console.log("=== INICIALIZANDO ADMIN ===");
-console.log("Estado do DOM:", document.readyState);
-console.log("URL atual:", window.location.href);
+// Logs de debug removidos para produção
 
 // Inicializa elementos
 if (!initElements()) {
     console.error("Erro ao inicializar elementos do DOM");
-    console.log("Tentando novamente em 100ms...");
+    // Tentando novamente em 100ms
     setTimeout(init, 100);
     return;
 }
 
-console.log("Elementos encontrados:");
-console.log("  - promptText:", !!promptText);
-console.log("  - filesList:", !!filesList);
-console.log("  - btnSavePrompt:", !!btnSavePrompt);
-console.log("  - uploadForm:", !!uploadForm);
+// Elementos inicializados
 
 // Adiciona event listeners APENAS após elementos serem encontrados
 if (btnSavePrompt) {
@@ -504,7 +486,7 @@ if (btnSavePrompt) {
         e.preventDefault();
         savePrompt();
     });
-    console.log("Event listener do btnSavePrompt adicionado");
+    // Event listener do btnSavePrompt adicionado
 } else {
     console.error("btnSavePrompt não encontrado para adicionar event listener!");
 }
@@ -530,9 +512,7 @@ if (uploadForm) {
 
         uploadStatus.textContent = "Enviando...";
         try {
-            console.log("Enviando arquivo...");
             const headers = getAuthHeadersFormData();
-            console.log("Headers upload:", headers);
             
             const res = await fetch("/admin/files/upload", {
             method: "POST",
@@ -540,11 +520,8 @@ if (uploadForm) {
             body: formData
             });
 
-            console.log("Resposta upload:", res.status, res.statusText);
-
             if (!res.ok) {
                 if (res.status === 401) {
-                    console.log("Token inválido, redirecionando para login");
                     window.location.href = '/login';
                     return;
                 }
@@ -556,7 +533,7 @@ if (uploadForm) {
             }
 
             const data = await res.json();
-            console.log("Arquivo enviado com sucesso:", data);
+            // Arquivo enviado com sucesso
             uploadStatus.textContent = "Recurso adicionado com sucesso.";
             uploadForm.reset();
             if (window.clearFileInput) window.clearFileInput();
@@ -568,7 +545,7 @@ if (uploadForm) {
             uploadStatus.classList.add("error");
         }
     });
-    console.log("Event listener do uploadForm adicionado");
+    // Event listener do uploadForm adicionado
 } else {
     console.error("uploadForm não encontrado para adicionar event listener!");
 }
@@ -609,9 +586,9 @@ if (fileSearch) {
             filterFiles("");
         }
     });
-    console.log("Event listener da barra de pesquisa adicionado");
+    // Event listener da barra de pesquisa adicionado
 } else {
-    console.log("Barra de pesquisa não encontrada");
+    // Barra de pesquisa não encontrada
 }
 
 if (clearSearchBtn) {
@@ -623,27 +600,23 @@ if (clearSearchBtn) {
             fileSearch.focus();
         }
     });
-    console.log("Event listener do botão limpar pesquisa adicionado");
+    // Event listener do botão limpar pesquisa adicionado
 }
 
 // Atualiza token antes de verificar
 authToken = getAuthToken();
-console.log("Token presente:", !!authToken);
-console.log("Token:", authToken ? authToken.substring(0, 20) + "..." : "não encontrado");
+// Log de token removido por segurança
 
 // Verifica se tem token, se não tiver, redireciona para login
 if (!authToken) {
-    console.log("Sem token, redirecionando para login");
+    // Sem token, redirecionando para login
     window.location.href = '/login';
     return;
 }
 
-console.log("Carregando dados...");
 try {
     await Promise.all([loadPrompt(), loadFiles(), loadFileStats()]);
-    console.log("=== INICIALIZAÇÃO CONCLUÍDA ===");
-    console.log("Prompt carregado:", promptText ? promptText.value.length + " caracteres" : "NÃO");
-    console.log("Arquivos carregados:", filesList ? filesList.children.length + " itens" : "NÃO");
+    // Inicialização concluída
 } catch (err) {
     console.error("Erro na inicialização:", err);
     alert("Erro ao inicializar: " + err.message);
@@ -653,12 +626,11 @@ try {
 // ESTATÍSTICAS DE ARQUIVOS
 async function loadFileStats() {
     if (!statPdfs || !statGifs || !statTotalSize) {
-        console.log("Elementos de estatísticas não encontrados");
+        // Elementos de estatísticas não encontrados
         return;
     }
 
     try {
-        console.log("Carregando estatísticas de arquivos...");
         const headers = getAuthHeaders();
         
         if (!headers.Authorization) {
@@ -670,11 +642,8 @@ async function loadFileStats() {
             headers: headers
         });
         
-        console.log("Resposta stats:", res.status, res.statusText);
-        
         if (!res.ok) {
             if (res.status === 401) {
-                console.log("Token inválido, redirecionando para login");
                 window.location.href = '/login';
                 return;
             }
@@ -684,7 +653,7 @@ async function loadFileStats() {
         }
         
         const data = await res.json();
-        console.log("Estatísticas recebidas:", data);
+        // Estatísticas recebidas
         
         if (statPdfs) statPdfs.textContent = data.total_pdfs || 0;
         if (statGifs) statGifs.textContent = data.total_gifs || 0;
@@ -705,8 +674,220 @@ function formatFileSize(bytes) {
 }
 
 // Teste imediato para verificar se o script está carregando
-console.log("=== ADMIN.JS CARREGADO ===");
-console.log("Timestamp:", new Date().toISOString());
+// Log de inicialização removido para produção
+
+// ====== BACKUP ======
+function showBackupModal(title, message, status, progress = 0) {
+    const modal = document.getElementById("backup-download-modal");
+    const modalTitle = document.getElementById("backup-modal-title");
+    const modalMessage = document.getElementById("backup-modal-message");
+    const modalStatus = document.getElementById("backup-modal-status");
+    const progressBar = document.getElementById("backup-progress-bar");
+    
+    if (modal) {
+        modal.classList.add("active");
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalMessage) modalMessage.textContent = message;
+        if (modalStatus) modalStatus.textContent = status;
+        if (progressBar) progressBar.style.width = progress + "%";
+    }
+}
+
+function hideBackupModal() {
+    const modal = document.getElementById("backup-download-modal");
+    if (modal) {
+        modal.classList.remove("active");
+    }
+}
+
+async function createBackup() {
+    const btnBackup = document.getElementById("btn-backup");
+    if (!btnBackup) {
+        console.error("Botão de backup não encontrado!");
+        return;
+    }
+    
+    // Salva o estado original
+    const originalText = btnBackup.textContent;
+    const originalHTML = btnBackup.innerHTML;
+    
+    // Desabilita o botão e mostra loading com animação
+    btnBackup.classList.add("loading");
+    btnBackup.textContent = "Criando backup";
+    btnBackup.disabled = true;
+    
+    // Mostra modal de download
+    showBackupModal("Criando Backup", "Preparando os arquivos...", "Iniciando processo de backup", 10);
+    
+    // Iniciando backup
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            hideBackupModal();
+            alert("Você precisa estar autenticado para fazer backup.");
+            window.location.href = '/login';
+            return;
+        }
+        
+        showBackupModal("Criando Backup", "Conectando ao servidor...", "Verificando autenticação", 20);
+        
+        // Fazendo requisição para /admin/backup
+        
+        // Faz a requisição
+        showBackupModal("Criando Backup", "Processando backup...", "Executando script de backup", 40);
+        
+        const res = await fetch("/admin/backup", {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        // Resposta recebida
+        
+        if (!res.ok) {
+            hideBackupModal();
+            if (res.status === 401) {
+                alert("Sessão expirada. Por favor, faça login novamente.");
+                window.location.href = '/login';
+                return;
+            }
+            
+            const errorText = await res.text().catch(() => "Erro desconhecido");
+            console.error("Erro na resposta:", errorText);
+            throw new Error(`Erro ao criar backup: ${res.status} - ${errorText}`);
+        }
+        
+        showBackupModal("Criando Backup", "Backup criado com sucesso!", "Preparando download...", 70);
+        
+        // Obtém o nome do arquivo do header Content-Disposition ou usa padrão
+        const contentDisposition = res.headers.get("Content-Disposition");
+        let filename = "urania_backup.tar.gz";
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1].replace(/['"]/g, '');
+            }
+        }
+        
+        // Nome do arquivo obtido
+        
+        showBackupModal("Baixando Backup", `Arquivo: ${filename}`, "Transferindo arquivo...", 80);
+        
+        // Cria blob e faz download
+        const blob = await res.blob();
+        
+        // Blob criado
+        
+        // Verifica se o blob não está vazio
+        if (blob.size === 0) {
+            hideBackupModal();
+            throw new Error("Arquivo de backup está vazio");
+        }
+        
+        const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+        // Download iniciado
+        
+        showBackupModal("Baixando Backup", `Arquivo: ${filename}`, `Tamanho: ${sizeMB} MB - Iniciando download...`, 90);
+        
+        // Cria link de download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        
+        // Força o download
+        a.click();
+        
+        // Mostra sucesso no modal
+        showBackupModal("✅ Download Concluído!", `Arquivo: ${filename}`, `Tamanho: ${sizeMB} MB - Download iniciado!`, 100);
+        
+        // Aguarda um pouco antes de limpar (para garantir que o download iniciou)
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            if (a.parentNode) {
+                document.body.removeChild(a);
+            }
+        }, 500);
+        
+        // Fecha o modal após 2 segundos
+        setTimeout(() => {
+            hideBackupModal();
+            
+            // Sucesso - remove animação e mostra mensagem no botão
+            btnBackup.classList.remove("loading");
+            btnBackup.disabled = false;
+            btnBackup.textContent = "✅ Download concluído!";
+            btnBackup.style.background = "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
+            btnBackup.style.animation = "none";
+            
+            // Backup concluído com sucesso
+            
+            // Restaura após 3 segundos
+            setTimeout(() => {
+                btnBackup.textContent = originalText;
+                btnBackup.innerHTML = originalHTML;
+                btnBackup.style.background = "";
+                btnBackup.style.animation = "";
+            }, 3000);
+        }, 2000);
+        
+    } catch (err) {
+        console.error("Erro ao criar backup:", err);
+        
+        // Mostra erro no modal
+        showBackupModal("❌ Erro no Backup", err.message, "Tente novamente mais tarde", 0);
+        
+        setTimeout(() => {
+            hideBackupModal();
+            alert("Erro ao criar backup: " + err.message);
+        }, 3000);
+        
+        // Restaura estado original em caso de erro
+        btnBackup.classList.remove("loading");
+        btnBackup.disabled = false;
+        btnBackup.textContent = originalText;
+        btnBackup.innerHTML = originalHTML;
+        btnBackup.style.background = "";
+        btnBackup.style.animation = "";
+    }
+}
+
+// Adiciona event listener ao botão de backup
+function setupBackupButton() {
+    const btnBackup = document.getElementById("btn-backup");
+    if (btnBackup) {
+        // Remove event listeners anteriores para evitar duplicação
+        const newBtn = btnBackup.cloneNode(true);
+        btnBackup.parentNode.replaceChild(newBtn, btnBackup);
+        
+        newBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            // Botão de backup clicado
+            createBackup();
+            return false;
+        });
+        
+        // Também previne o comportamento padrão no href
+        newBtn.setAttribute("href", "javascript:void(0)");
+        newBtn.setAttribute("onclick", "return false;");
+        // Botão de backup configurado
+    } else {
+        console.warn("⚠️ Botão de backup não encontrado no DOM");
+    }
+}
+
+// Tenta configurar imediatamente (se DOM já estiver pronto)
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", setupBackupButton);
+} else {
+    // DOM já está pronto
+    setupBackupButton();
+}
 
 // DRAG AND DROP FUNCTIONALITY
 function setupDragAndDrop() {
@@ -814,15 +995,17 @@ function setupDragAndDrop() {
 
 // Aguarda DOM estar pronto antes de inicializar
 if (document.readyState === 'loading') {
-    console.log("DOM ainda carregando, aguardando DOMContentLoaded...");
+    // DOM ainda carregando, aguardando DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOMContentLoaded disparado!");
+        // DOMContentLoaded disparado
         setupDragAndDrop();
+        setupBackupButton();
         init();
     });
 } else {
     // DOM já está pronto
-    console.log("DOM já está pronto, inicializando imediatamente...");
+    // DOM já está pronto, inicializando imediatamente
     setupDragAndDrop();
+    setupBackupButton();
     init();
 }

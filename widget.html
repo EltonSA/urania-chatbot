@@ -719,7 +719,16 @@
     }
   }
 
-  function addResolveCard(afterBubbleEl){
+  function addResolveCard(afterRowEl){
+    // Cria uma nova linha para o card de feedback (não dentro da bolha)
+    const resolveRow = document.createElement("div");
+    resolveRow.className = "msg-row bot";
+    
+    // Adiciona avatar vazio para alinhamento
+    const avatarDiv = document.createElement("div");
+    avatarDiv.className = "side-avatar";
+    resolveRow.appendChild(avatarDiv);
+    
     const card = document.createElement("div");
     card.className = "resolve-card";
 
@@ -751,11 +760,11 @@
       try{
         await sendFeedback(true);
         card.innerHTML = `<div class="resolve-text">Obrigado! ✅ Registramos sua resposta.</div>`;
-        setTimeout(()=>card.remove(), 1500);
+        setTimeout(()=>resolveRow.remove(), 1500);
       }catch(e){
         console.error(e);
         card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
-        setTimeout(()=>card.remove(), 2200);
+        setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
 
@@ -764,15 +773,18 @@
       try{
         await sendFeedback(false);
         card.innerHTML = `<div class="resolve-text">Obrigado! ❗ Vamos melhorar para a próxima.</div>`;
-        setTimeout(()=>card.remove(), 1700);
+        setTimeout(()=>resolveRow.remove(), 1700);
       }catch(e){
         console.error(e);
         card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
-        setTimeout(()=>card.remove(), 2200);
+        setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
 
-    afterBubbleEl.appendChild(card);
+    resolveRow.appendChild(card);
+    
+    // Adiciona a linha DEPOIS da linha da mensagem do bot
+    afterRowEl.parentNode.insertBefore(resolveRow, afterRowEl.nextSibling);
     scrollToBottom();
   }
 
@@ -806,6 +818,13 @@
       });
 
       if(!res.ok){
+        // Se for erro 503 (Service Unavailable), significa que OpenAI está indisponível
+        if(res.status === 503){
+          // Verifica o status novamente para obter a mensagem de erro
+          const statusData = await checkChatStatus();
+          const errorMsg = statusData.error_message || "Serviço temporariamente indisponível";
+          throw new Error(`SERVICE_UNAVAILABLE:${errorMsg}`);
+        }
         const errText = await res.text().catch(()=> "");
         throw new Error(errText || "Erro no servidor");
       }
@@ -826,20 +845,52 @@
       chatHistory.push({ role:"assistant", content: data.reply || "" });
 
       if (data.should_ask_resolution === true) {
-        // Aguarda um pouco para a animação terminar antes de mostrar o card
-        setTimeout(() => {
-          addResolveCard(botBubble);
-        }, (data.reply || "").length * 30 + 500);
+        // Encontra a linha (row) da mensagem do bot para adicionar o card depois
+        const botRow = botBubble.closest(".msg-row");
+        if(botRow){
+          // Aguarda um pouco para a animação terminar antes de mostrar o card
+          setTimeout(() => {
+            addResolveCard(botRow);
+          }, (data.reply || "").length * 30 + 500);
+        }
       }
 
       chatStatus.textContent = "Pronto para outra pergunta.";
     } catch(err){
       console.error("Erro no chat:", err);
       removeTypingIndicator();
-      addMessage("bot", "Houve um erro ao falar com o servidor.");
-      chatStatus.textContent = "Erro de conexão.";
+      
+      // Verifica se é erro de serviço indisponível
+      const errMsg = err.message || String(err);
+      if(errMsg.startsWith("SERVICE_UNAVAILABLE:")){
+        // Extrai a mensagem de erro específica
+        const errorDetail = errMsg.replace("SERVICE_UNAVAILABLE:", "");
+        
+        // Bloqueia o chat
+        chatInput.disabled = true;
+        chatSend.disabled = true;
+        chatStatus.textContent = "Serviço temporariamente indisponível";
+        
+        // Exibe mensagem clara de aviso
+        addMessage(
+          "bot",
+          "⚠️ O serviço de chat está temporariamente indisponível.\n\n" +
+          errorDetail + "\n\n" +
+          "Por favor, tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte."
+        );
+        
+        // Verifica o status periodicamente para quando voltar
+        checkStatusPeriodically();
+      } else {
+        // Outros erros - mensagem genérica
+        addMessage("bot", "Houve um erro ao processar sua mensagem. Por favor, tente novamente.");
+        chatStatus.textContent = "Erro de conexão.";
+      }
     } finally {
-      chatSend.disabled = false;
+      // Só reabilita se não for erro de serviço indisponível
+      if(!chatInput.disabled){
+        chatSend.disabled = false;
+      }
     }
   }
 
@@ -848,12 +899,78 @@
     if(e.key === "Enter"){ e.preventDefault(); sendChat(); }
   });
 
-  // mensagem inicial
-  addMessage(
-    "bot",
-    "Olá! 👋 Sou o assistente virtual deste ambiente de testes.\n" +
-    "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
-  );
+  // ====== VERIFICAÇÃO DE STATUS DO SERVIÇO ======
+  async function checkChatStatus(){
+    try{
+      const res = await fetch("/chat/status");
+      if(!res.ok) throw new Error("Erro ao verificar status");
+      const data = await res.json();
+      return data;
+    }catch(err){
+      console.error("Erro ao verificar status:", err);
+      return { available: false, error_message: "Erro ao verificar status do serviço" };
+    }
+  }
+
+  // Verifica status periodicamente quando o serviço está indisponível
+  let statusCheckInterval = null;
+  
+  function checkStatusPeriodically(){
+    // Limpa intervalo anterior se existir
+    if(statusCheckInterval){
+      clearInterval(statusCheckInterval);
+    }
+    
+    // Verifica a cada 30 segundos
+    statusCheckInterval = setInterval(async () => {
+      const status = await checkChatStatus();
+      if(status.available){
+        // Serviço voltou! Reabilita o chat
+        clearInterval(statusCheckInterval);
+        statusCheckInterval = null;
+        
+        chatInput.disabled = false;
+        chatSend.disabled = false;
+        chatStatus.textContent = "Serviço restaurado! Pronto para conversar.";
+        
+        addMessage(
+          "bot",
+          "✅ O serviço foi restaurado! Agora posso ajudá-lo novamente.\n\n" +
+          "Como posso ajudá-lo hoje?"
+        );
+      }
+    }, 30000); // Verifica a cada 30 segundos
+  }
+
+  // Verifica status na inicialização
+  (async function init(){
+    const status = await checkChatStatus();
+    
+    if(!status.available){
+      // Serviço indisponível - bloqueia o chat
+      chatInput.disabled = true;
+      chatSend.disabled = true;
+      chatStatus.textContent = "Serviço temporariamente indisponível";
+      
+      // Mensagem de erro clara
+      addMessage(
+        "bot",
+        "⚠️ O serviço de chat está temporariamente indisponível.\n\n" +
+        (status.error_message || "Por favor, tente novamente mais tarde.") +
+        "\n\nSe o problema persistir, entre em contato com o suporte."
+      );
+      
+      // Inicia verificação periódica
+      checkStatusPeriodically();
+    } else {
+      // Serviço disponível - mensagem inicial normal
+      addMessage(
+        "bot",
+        "Olá! 👋 Sou o assistente virtual deste ambiente de testes.\n" +
+        "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
+      );
+    }
+  })();
 </script>
 </body>
 </html>

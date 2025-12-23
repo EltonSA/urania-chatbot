@@ -7,13 +7,61 @@ import uuid
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models import FileModel
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def validate_openai_connection() -> Tuple[bool, Optional[str]]:
+    """
+    Valida a conexão com a API OpenAI.
+    
+    Returns:
+        Tuple[bool, Optional[str]]: (sucesso, mensagem_de_erro)
+        - Se sucesso=True, a conexão está OK
+        - Se sucesso=False, retorna mensagem de erro
+    """
+    if not settings.OPENAI_API_KEY:
+        # Retorna mensagem genérica para o usuário (detalhes técnicos ficam nos logs)
+        return False, "Serviço de IA temporariamente indisponível"
+    
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        
+        # Faz uma chamada simples para validar a API key
+        # Usa um modelo simples e barato para teste
+        response = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "Test"},
+                {"role": "user", "content": "OK"}
+            ],
+            max_tokens=5,
+            timeout=10  # Timeout de 10 segundos
+        )
+        
+        # Se chegou aqui, a conexão está OK
+        return True, None
+        
+    except Exception as e:
+        error_msg = str(e).lower()
+        
+        # Mensagens de erro mais específicas
+        if "api_key" in error_msg or "authentication" in error_msg or "invalid" in error_msg:
+            return False, "Token da API OpenAI inválido ou não autorizado"
+        elif "rate limit" in error_msg:
+            return False, "Limite de requisições da API OpenAI atingido"
+        elif "insufficient_quota" in error_msg or "quota" in error_msg:
+            return False, "Cota da API OpenAI insuficiente. Verifique seu plano"
+        elif "timeout" in error_msg or "connection" in error_msg:
+            return False, "Serviço OpenAI temporariamente indisponível"
+        else:
+            return False, f"Erro ao conectar com OpenAI: {str(e)}"
 
 
 def build_file_url(file: FileModel) -> str:

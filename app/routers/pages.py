@@ -65,14 +65,68 @@ def login_page():
 
 @router.get("/")
 def root():
-    """Endpoint raiz"""
-    return {
-        "message": "SaaS Chatbot com PDFs e GIFs está rodando.",
-        "version": "1.0.0",
-        "admin": "/admin",
-        "widget": "/widget",
-        "dashboard": "/dashboard",
-        "docs": "/docs",
-        "login": "/login"
-    }
+    """
+    Endpoint raiz
+    
+    Comportamento:
+    - Em produção (DEBUG=False): redireciona para /widget por padrão
+    - Em desenvolvimento (DEBUG=True): retorna JSON com informações por padrão
+    - Pode ser configurado via ROOT_REDIRECT no .env:
+      * "widget" -> redireciona para /widget
+      * "admin" -> redireciona para /admin
+      * "dashboard" -> redireciona para /dashboard
+      * "login" -> redireciona para /login
+      * "json" -> retorna JSON (apenas em desenvolvimento)
+      * vazio -> usa padrão baseado em DEBUG
+    """
+    # Determina o comportamento baseado na configuração
+    redirect_target = settings.ROOT_REDIRECT
+    
+    # Se não estiver configurado, usa padrão baseado em DEBUG
+    if not redirect_target:
+        if settings.DEBUG:
+            # Em desenvolvimento, retorna JSON
+            redirect_target = "json"
+        else:
+            # Em produção, redireciona para widget
+            redirect_target = "widget"
+    
+    # Executa redirecionamento ou retorna JSON
+    if redirect_target == "json":
+        # Apenas em desenvolvimento
+        if not settings.DEBUG:
+            # Em produção, força redirecionamento para widget mesmo se configurado como json
+            return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
+        
+        return {
+            "message": f"{settings.APP_NAME} está rodando.",
+            "version": settings.APP_VERSION,
+            "admin": "/admin",
+            "widget": "/widget",
+            "dashboard": "/dashboard",
+            "docs": "/docs" if settings.DEBUG else None,
+            "login": "/login"
+        }
+    elif redirect_target == "widget":
+        return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
+    elif redirect_target == "admin":
+        return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
+    elif redirect_target == "dashboard":
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    elif redirect_target == "login":
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    else:
+        # Valor inválido, usa padrão (widget em produção)
+        if settings.DEBUG:
+            return {
+                "message": f"{settings.APP_NAME} está rodando.",
+                "version": settings.APP_VERSION,
+                "admin": "/admin",
+                "widget": "/widget",
+                "dashboard": "/dashboard",
+                "docs": "/docs",
+                "login": "/login"
+            }
+        else:
+            return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
 
