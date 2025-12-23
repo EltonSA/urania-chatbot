@@ -133,9 +133,14 @@ if (!promptText) {
 }
 
 const value = promptText.value || "";
+const originalText = btnSavePrompt.textContent;
+const originalHTML = btnSavePrompt.innerHTML;
+
 btnSavePrompt.disabled = true;
+btnSavePrompt.textContent = "⏳ Salvando...";
 promptStatus.textContent = "Salvando...";
-promptStatus.classList.remove("error");
+promptStatus.classList.remove("error", "success");
+promptStatus.classList.add("show");
 
 try {
     const headers = getAuthHeaders();
@@ -159,9 +164,25 @@ try {
     }
 
     const data = await res.json();
-    // Prompt salvo com sucesso
-    promptStatus.textContent = "Prompt salvo com sucesso.";
-    setTimeout(() => { promptStatus.textContent = ""; }, 2000);
+    
+    // Feedback visual de sucesso
+    promptStatus.textContent = "✅ Prompt salvo com sucesso!";
+    promptStatus.classList.remove("error");
+    promptStatus.classList.add("success", "show");
+    
+    // Animação no botão
+    btnSavePrompt.style.background = "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
+    btnSavePrompt.textContent = "✅ Salvo!";
+    btnSavePrompt.disabled = false;
+    
+    // Restaura após 3 segundos
+    setTimeout(() => { 
+        promptStatus.textContent = "";
+        promptStatus.classList.remove("success", "show");
+        btnSavePrompt.style.background = "";
+        btnSavePrompt.textContent = originalText;
+        btnSavePrompt.innerHTML = originalHTML;
+    }, 3000);
 } catch (err) {
     console.error("Erro ao salvar prompt:", err);
     promptStatus.textContent = "Erro ao salvar: " + err.message;
@@ -267,6 +288,7 @@ function renderFiles(files, searchTerm = "") {
     filteredFiles.forEach(f => {
     const item = document.createElement("div");
     item.className = "resource-item";
+    item.dataset.fileId = f.id; // Adiciona ID para facilitar busca
 
     // Header com ícone e informações principais
     const header = document.createElement("div");
@@ -405,35 +427,236 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-async function editFile(file) {
-const newTitle = window.prompt("Editar título:", file.title || "");
-if (newTitle === null) return;
+// Estado de edição
+let editingFileId = null;
 
-const newTags = window.prompt("Editar tags (separadas por vírgula):", file.tags || "");
-if (newTags === null) return;
-
-try {
-    const res = await fetch(`/admin/files/${file.id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ title: newTitle, tags: newTags })
-    });
-
-    if (!res.ok) {
-        if (res.status === 401) {
-            if (await login()) {
-                return editFile(file);
-            }
-        }
-        alert("Erro ao atualizar recurso.");
+function editFile(file) {
+    // Se já está editando outro arquivo, cancela a edição anterior
+    if (editingFileId && editingFileId !== file.id) {
+        cancelEdit(editingFileId);
+    }
+    
+    // Se já está editando este arquivo, cancela
+    if (editingFileId === file.id) {
+        cancelEdit(file.id);
         return;
     }
-
-    await Promise.all([loadFiles(), loadFileStats()]);
-} catch (err) {
-    console.error("Erro ao editar recurso:", err);
-    alert("Erro ao editar recurso.");
+    
+    editingFileId = file.id;
+    
+    // Encontra o item na lista
+    const items = document.querySelectorAll('.resource-item');
+    let itemElement = null;
+    items.forEach(item => {
+        if (String(item.dataset.fileId) === String(file.id)) {
+            itemElement = item;
+        }
+    });
+    
+    if (!itemElement) return;
+    
+    // Adiciona classe de edição
+    itemElement.classList.add('editing');
+    
+    // Encontra elementos
+    const titleEl = itemElement.querySelector('.resource-title');
+    const tagsEl = itemElement.querySelector('.resource-tags');
+    const actionsEl = itemElement.querySelector('.resource-actions');
+    
+    if (!titleEl || !actionsEl) return;
+    
+    // Salva valores originais
+    const originalTitle = file.title || '';
+    const originalTags = file.tags || '';
+    
+    // Cria inputs de edição
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'edit-input edit-title-input';
+    titleInput.value = originalTitle;
+    titleInput.placeholder = 'Título do arquivo';
+    
+    const tagsInput = document.createElement('input');
+    tagsInput.type = 'text';
+    tagsInput.className = 'edit-input edit-tags-input';
+    tagsInput.value = originalTags;
+    tagsInput.placeholder = 'Tags (separadas por vírgula)';
+    
+    // Substitui título
+    const titleContainer = titleEl.parentElement;
+    titleEl.style.display = 'none';
+    titleInput.style.display = 'block';
+    titleContainer.insertBefore(titleInput, titleEl);
+    
+    // Substitui tags
+    if (tagsEl) {
+        tagsEl.style.display = 'none';
+        tagsInput.style.display = 'block';
+        tagsEl.parentElement.insertBefore(tagsInput, tagsEl);
+    } else {
+        // Se não tinha tags, adiciona o input
+        const infoEl = itemElement.querySelector('.resource-info');
+        if (infoEl) {
+            tagsInput.style.display = 'block';
+            infoEl.appendChild(tagsInput);
+        }
+    }
+    
+    // Cria botões de ação
+    const editActions = document.createElement('div');
+    editActions.className = 'edit-actions';
+    
+    const btnSave = document.createElement('button');
+    btnSave.type = 'button';
+    btnSave.className = 'btn-small btn-save-edit';
+    btnSave.innerHTML = '💾 Salvar';
+    btnSave.addEventListener('click', () => saveEdit(file.id, titleInput.value, tagsInput.value, originalTitle, originalTags));
+    
+    const btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.className = 'btn-small btn-cancel-edit';
+    btnCancel.innerHTML = '❌ Cancelar';
+    btnCancel.addEventListener('click', () => cancelEdit(file.id));
+    
+    editActions.appendChild(btnSave);
+    editActions.appendChild(btnCancel);
+    
+    // Esconde ações originais e mostra ações de edição
+    actionsEl.style.display = 'none';
+    actionsEl.parentElement.insertBefore(editActions, actionsEl);
+    
+    // Foca no input de título
+    setTimeout(() => titleInput.focus(), 100);
+    
+    // Salva ao pressionar Enter no título
+    titleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            tagsInput.focus();
+        }
+    });
+    
+    // Salva ao pressionar Enter nas tags ou Escape para cancelar
+    tagsInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit(file.id, titleInput.value, tagsInput.value, originalTitle, originalTags);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit(file.id);
+        }
+    });
 }
+
+function cancelEdit(fileId) {
+    editingFileId = null;
+    
+    const items = document.querySelectorAll('.resource-item');
+    items.forEach(item => {
+        if (String(item.dataset.fileId) === String(fileId)) {
+            item.classList.remove('editing');
+            
+            // Remove inputs
+            const titleInput = item.querySelector('.edit-title-input');
+            const tagsInput = item.querySelector('.edit-tags-input');
+            const editActions = item.querySelector('.edit-actions');
+            
+            if (titleInput) {
+                const titleEl = item.querySelector('.resource-title');
+                if (titleEl) {
+                    titleEl.style.display = '';
+                    titleInput.remove();
+                }
+            }
+            
+            if (tagsInput) {
+                const tagsEl = item.querySelector('.resource-tags');
+                if (tagsEl) {
+                    tagsEl.style.display = '';
+                    tagsInput.remove();
+                } else {
+                    tagsInput.remove();
+                }
+            }
+            
+            if (editActions) {
+                const actionsEl = item.querySelector('.resource-actions');
+                if (actionsEl) {
+                    actionsEl.style.display = '';
+                    editActions.remove();
+                }
+            }
+        }
+    });
+}
+
+async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) {
+    // Se não mudou nada, apenas cancela
+    if (newTitle.trim() === originalTitle && newTags.trim() === originalTags) {
+        cancelEdit(fileId);
+        return;
+    }
+    
+    const item = document.querySelector(`.resource-item[data-file-id="${fileId}"]`);
+    if (!item) return;
+    
+    // Mostra loading
+    const btnSave = item.querySelector('.btn-save-edit');
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '⏳ Salvando...';
+    }
+    
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+        
+        const res = await fetch(`/admin/files/${fileId}`, {
+            method: "PUT",
+            headers: headers,
+            body: JSON.stringify({ 
+                title: newTitle.trim(), 
+                tags: newTags.trim() 
+            })
+        });
+
+        if (!res.ok) {
+            if (res.status === 401) {
+                if (await login()) {
+                    return saveEdit(fileId, newTitle, newTags, originalTitle, originalTags);
+                }
+            }
+            throw new Error("Erro ao atualizar recurso");
+        }
+
+        const data = await res.json();
+        
+        // Atualiza o arquivo na lista local
+        const fileIndex = allFiles.findIndex(f => f.id === fileId);
+        if (fileIndex !== -1) {
+            allFiles[fileIndex].title = data.title;
+            allFiles[fileIndex].tags = data.tags;
+        }
+        
+        // Recarrega a lista e estatísticas
+        await Promise.all([loadFiles(), loadFileStats()]);
+        
+        // Feedback visual de sucesso
+        if (btnSave) {
+            btnSave.innerHTML = '✅ Salvo!';
+            setTimeout(() => {
+                cancelEdit(fileId);
+            }, 500);
+        }
+        
+    } catch (err) {
+        // Erro ao editar recurso
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '💾 Salvar';
+        }
+        alert("Erro ao atualizar recurso: " + (err.message || "Erro desconhecido"));
+    }
 }
 
 async function deleteFile(fileId) {

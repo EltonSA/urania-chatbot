@@ -576,12 +576,14 @@ main {
 .status-text {
     display: inline-block;
     margin-left: 12px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
-    color: var(--success);
     opacity: 0;
     transform: translateX(-10px);
     transition: all 0.3s ease;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: transparent;
 }
 
 .status-text.show {
@@ -591,6 +593,31 @@ main {
 
 .status-text.error { 
     color: var(--error);
+    background: #fef2f2;
+    animation: shake 0.5s ease;
+}
+
+.status-text.success {
+    color: #16a34a;
+    background: #f0fdf4;
+    animation: slideInSuccess 0.4s ease;
+}
+
+@keyframes slideInSuccess {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }
 
 .label {
@@ -1107,6 +1134,110 @@ select:focus {
     content: '🏷️';
     font-size: 14px;
     opacity: 0.8;
+}
+
+/* ====== EDIÇÃO INLINE ====== */
+.resource-item.editing {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light), var(--shadow-md);
+    background: var(--bg);
+}
+
+.resource-item.editing::before {
+    transform: scaleX(1);
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
+}
+
+.edit-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--accent);
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--primary);
+    transition: all 0.2s ease;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-light);
+    margin-top: 8px;
+    display: none;
+}
+
+.edit-input:focus {
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 0 3px var(--accent-light), 0 4px 12px rgba(28, 139, 60, 0.15);
+    transform: translateY(-1px);
+}
+
+.edit-title-input {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.edit-tags-input {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 12px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.btn-save-edit {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(28, 139, 60, 0.25);
+    flex: 1;
+}
+
+.btn-save-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(28, 139, 60, 0.35);
+}
+
+.btn-save-edit:active {
+    transform: translateY(0);
+}
+
+.btn-save-edit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-cancel-edit {
+    background: var(--bg-secondary);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.btn-cancel-edit:hover {
+    background: #f3f4f6;
+    color: var(--primary);
+    border-color: var(--muted);
 }
 
 .btn-small {
