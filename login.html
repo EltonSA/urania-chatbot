@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login - Painel Administrativo</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --primary: #0f172a;
+      --muted: #64748b;
+      --accent: #1C8B3C;
+      --accent-hover: #16a34a;
+      --accent-light: #f0fdf4;
+      --border: #e2e8f0;
+      --error: #dc2626;
+      --radius: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", sans-serif;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 64px rgba(15, 23, 42, 0.15), 0 8px 24px rgba(15, 23, 42, 0.1);
+      border: 1px solid var(--border);
+      padding: 48px 40px;
+      animation: fadeInUp 0.5s ease;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(28, 139, 60, 0.3);
+      transition: transform 0.3s ease;
+    }
+    
+    .logo-circle:hover {
+      transform: scale(1.05);
+    }
+    
+    .logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .logo-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-subtitle {
+      font-size: 15px;
+      color: var(--muted);
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 15px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      color: var(--primary);
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-light), 0 4px 12px rgba(28, 139, 60, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .form-input::placeholder {
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      margin-top: 8px;
+      box-shadow: 0 4px 12px rgba(28, 139, 60, 0.25);
+      letter-spacing: 0.3px;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(28, 139, 60, 0.35);
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 12px rgba(28, 139, 60, 0.25);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      color: var(--error);
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 24px;
+      display: none;
+      animation: shake 0.4s ease;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer-text {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 32px 24px;
+        max-width: 100%;
+      }
+      
+      .logo-circle {
+        width: 64px;
+        height: 64px;
+      }
+      
+      .logo-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-section">
+      <div class="logo-circle">
+        <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar Urânia +" />
+      </div>
+      <h1 class="logo-title">Urânia +</h1>
+      <p class="logo-subtitle">Painel Administrativo</p>
+    </div>
+
+    <div class="error-message" id="error-message"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Usuário</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          class="form-input"
+          placeholder="Digite seu usuário"
+          required
+          autocomplete="username"
+          autofocus
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-input"
+          placeholder="Digite sua senha"
+          required
+          autocomplete="current-password"
+        />
+      </div>
+
+      <button type="submit" class="btn-login" id="btn-login">
+        Entrar
+      </button>
+    </form>
+
+    <p class="footer-text">
+      Sistema de Gerenciamento de Chatbot
+    </p>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById("login-form");
+    const btnLogin = document.getElementById("btn-login");
+    const errorMessage = document.getElementById("error-message");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add("show");
+      setTimeout(() => {
+        errorMessage.classList.remove("show");
+      }, 5000);
+    }
+
+    function setLoading(loading) {
+      if (loading) {
+        btnLogin.disabled = true;
+        btnLogin.innerHTML = '<span class="loading"></span>Entrando...';
+      } else {
+        btnLogin.disabled = false;
+        btnLogin.textContent = "Entrar";
+      }
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!username || !password) {
+        showError("Por favor, preencha todos os campos.");
+        return;
+      }
+
+      setLoading(true);
+      errorMessage.classList.remove("show");
+
+      try {
+        const res = await fetch("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showError(data.detail || "Usuário ou senha incorretos.");
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        localStorage.setItem("admin_token", data.access_token);
+        
+        // Cookie já foi definido pelo servidor, apenas redireciona
+        // Redireciona para o painel admin
+        window.location.href = "/admin";
+      } catch (err) {
+        console.error("Erro no login:", err);
+        showError("Erro de conexão. Tente novamente.");
+        setLoading(false);
+      }
+    });
+
+    // Enter no campo de senha também submete o formulário
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        loginForm.dispatchEvent(new Event("submit"));
+      }
+    });
+  </script>
+</body>
+</html>
+
