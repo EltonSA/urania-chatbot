@@ -3,466 +3,175 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
   <title>Widget do Chatbot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',
+              500:'#22c55e',600:'#1C8B3C',700:'#15803d',800:'#166534',900:'#14532d'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','BlinkMacSystemFont','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root{
-      --bg:#f8fafc;
-      --bg-secondary:#ffffff;
-      --card:#ffffff;
-      --text:#0f172a;
-      --text-light:#475569;
-      --primary:#0f172a;
-      --muted:#64748b;
-      --muted-light:#94a3b8;
-      --green:#1C8B3C;
-      --accent:#1C8B3C;
-      --accent-hover:#16a34a;
-      --accent-light:#f0fdf4;
-      --border:#e2e8f0;
-      --border-light:#f1f5f9;
-      --radius:16px;
-      --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-    *{box-sizing:border-box;}
-    html,body{margin:0;padding:0;height:100%;}
-    body{
-      height:100vh;
-      width:100vw;
-      margin:0;
-      padding:0;
-      background:linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter","Roboto",sans-serif;
-      color:var(--primary);
-      display:flex;
-      align-items:stretch;
-      justify-content:stretch;
-      overflow:hidden;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
+    /* ===== Animations ===== */
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-6px);opacity:1}}
 
-    .wrapper{
-      width:100%;
-      height:100%;
-      max-width:none;
-      background:var(--card);
-      border-radius:0;
-      box-shadow:none;
-      border:none;
-      padding:20px 24px 24px;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-      backdrop-filter:blur(10px);
-    }
+    /* ===== Chat Messages (dynamic) ===== */
+    .messages{padding:8px 6px;overflow-y:auto;flex:1;min-height:0;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{width:5px}
+    .messages::-webkit-scrollbar-track{background:transparent}
+    .messages::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+    .messages::-webkit-scrollbar-thumb:hover{background:#9ca3af}
 
-    .top-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      padding-bottom:18px;
-      border-bottom:2px solid var(--border-light);
-      margin-bottom:4px;
-    }
-    .top-left{display:flex;align-items:center;gap:12px;}
-    .avatar{
-      width:48px;height:48px;border-radius:14px;
-      background:linear-gradient(135deg, #1C8B3C 0%, #16a34a 100%);
-      display:flex;align-items:center;justify-content:center;
-      font-size:24px;color:#fff;
-      overflow:hidden;
-      object-fit:cover;
-      box-shadow:0 4px 12px rgba(28,139,60,0.25);
-      transition:transform 0.2s ease;
-    }
-    .avatar:hover{
-      transform:scale(1.05);
-    }
-    .avatar img{
-      width:100%;height:100%;object-fit:cover;
-    }
-    .top-text-title{font-size:12px;color:var(--muted);margin:0;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;}
-    .top-text-name{font-size:20px;font-weight:700;margin:2px 0 0;color:var(--text);letter-spacing:-0.02em;}
-    .top-right{font-size:13px;color:var(--muted);font-weight:500;}
+    .msg-row{display:flex;margin-bottom:12px;animation:fadeIn .3s ease}
+    .msg-row.bot{justify-content:flex-start}
+    .msg-row.user{justify-content:flex-end}
 
-    .chat-area{
-      margin-top:20px;
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
-      flex:1;
-      min-height:0;
-    }
-    .side-avatar{width:44px;margin-top:8px;display:flex;justify-content:center;flex-shrink:0;}
-    .side-avatar-inner{
-      width:40px;height:40px;border-radius:12px;
-      background:linear-gradient(135deg, #1C8B3C 0%, #16a34a 100%);
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;font-size:22px;
-      overflow:hidden;
-      object-fit:cover;
-      box-shadow:0 2px 8px rgba(28,139,60,0.2);
-    }
-    .side-avatar-inner img{
-      width:100%;height:100%;object-fit:cover;
-    }
+    .bubble{max-width:85%;padding:11px 15px;border-radius:18px;font-size:15px;line-height:1.55;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
+    .bubble:hover{transform:translateY(-1px)}
+    .bubble.bot{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 8px rgba(28,139,60,.18)}
+    .bubble.user{background:#fff;border:1.5px solid #e5e7eb;border-bottom-right-radius:6px;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.04)}
 
-    .chat-box{
-      flex:1;
-      border-radius:16px;
-      border:1px solid var(--border-light);
-      padding:16px 16px 14px;
-      background:var(--bg-secondary);
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      min-height:0;
-      max-height:100%;
-      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
-    }
+    .attachments{margin-top:10px}
 
-    /* IMPORTANTE: scroll do chat aqui */
-    .messages{
-      padding:8px 6px 6px;
-      overflow-y:auto;
-      flex:1;
-      min-height:0;
-      scroll-behavior:smooth;
-    }
-    .messages::-webkit-scrollbar{width:6px;}
-    .messages::-webkit-scrollbar-track{background:transparent;}
-    .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-    .messages::-webkit-scrollbar-thumb:hover{background:var(--muted-light);}
+    .gif-thumb{width:100%;max-width:700px;border-radius:14px;display:block;margin-top:8px;border:1px solid rgba(148,163,184,.5);cursor:zoom-in;background:#fff}
 
-    .msg-row{display:flex;margin-bottom:14px;animation:fadeIn 0.3s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
-    .msg-row.bot{justify-content:flex-start;}
-    .msg-row.user{justify-content:flex-end;}
+    /* PDF inline */
+    .pdf-inline{margin-top:10px;width:100%;max-width:720px;background:#fff;border:1px solid rgba(148,163,184,.5);border-radius:14px;overflow:hidden}
+    .pdf-inline-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-bottom:1px solid rgba(226,232,240,.8);gap:10px}
+    .pdf-inline-title{font-size:13px;font-weight:700;color:#065f46;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+    .pdf-inline-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .pdf-inline-btn{border:none;background:#1C8B3C;color:#fff;padding:6px 12px;font-size:12px;border-radius:999px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+    .pdf-inline-btn.secondary{background:#fff;color:#1C8B3C;border:1px solid #1C8B3C}
+    .pdf-inline-frame{width:100%;height:420px;border:none;background:#f9fafb;display:block}
 
-    .bubble{
-      max-width:85%;
-      padding:12px 16px;
-      border-radius:18px;
-      font-size:15px;
-      line-height:1.5;
-      word-wrap:break-word;
-      white-space:pre-wrap;
-      transition:transform 0.2s ease;
-    }
-    .bubble:hover{
-      transform:translateY(-1px);
-    }
-    .bubble.bot{
-      background:linear-gradient(135deg, var(--green) 0%, var(--accent-hover) 100%);
-      color:#ffffff;
-      border-bottom-left-radius:6px;
-      box-shadow:0 2px 8px rgba(28,139,60,0.2);
-    }
-    .bubble.user{
-      background:var(--card);
-      border:1.5px solid var(--border);
-      border-bottom-right-radius:6px;
-      color:var(--text);
-      box-shadow:0 2px 6px rgba(0,0,0,0.05);
-    }
+    /* Typing indicator */
+    .typing-indicator{background:#1C8B3C;color:#f9fafb;padding:10px 14px;display:flex;gap:4px;align-items:center}
+    .typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:typing 1.4s infinite}
+    .typing-dot:nth-child(2){animation-delay:.2s}
+    .typing-dot:nth-child(3){animation-delay:.4s}
 
-    .attachments{margin-top:10px;}
+    /* Side avatar */
+    .side-avatar{width:40px;margin-top:6px;display:flex;justify-content:center;flex-shrink:0}
+    .side-avatar-inner{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1C8B3C,#16a34a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;overflow:hidden;object-fit:cover;box-shadow:0 2px 6px rgba(28,139,60,.15)}
+    .side-avatar-inner img{width:100%;height:100%;object-fit:cover}
 
-    /* GIF inline */
-    .gif-thumb{
-      width:100%;
-      max-width:700px;
-      border-radius:14px;
-      display:block;
-      margin-top:8px;
-      border:1px solid rgba(148,163,184,0.7);
-      cursor:zoom-in;
-      background:#fff;
-    }
+    /* Resolve card */
+    .resolve-card{margin-top:10px;background:#fff;border:2px solid #f3f4f6;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.03)}
+    .resolve-text{font-size:13px;color:#0f172a;font-weight:600}
+    .resolve-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .resolve-btn{border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.08)}
+    .resolve-btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.12)}
+    .resolve-btn:active{transform:translateY(0)}
+    .resolve-yes{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+    .resolve-no{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
 
-    /* ===== PDF INLINE NO CHAT ===== */
-    .pdf-inline{
-      margin-top:10px;
-      width:100%;
-      max-width:720px;
-      background:#ffffff;
-      border:1px solid rgba(148,163,184,0.7);
-      border-radius:14px;
-      overflow:hidden;
-    }
+    /* WhatsApp button */
+    .whatsapp-support-btn{display:inline-block;margin-top:10px;padding:8px 14px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;transition:all .2s ease;box-shadow:0 2px 6px rgba(37,211,102,.25)}
+    .whatsapp-support-btn:hover{background:#20BA5A;transform:translateY(-1px);box-shadow:0 4px 10px rgba(37,211,102,.3)}
 
-    .pdf-inline-header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:8px 12px;
-      background:#f0fdf4;
-      border-bottom:1px solid rgba(226,232,240,0.9);
-      gap:10px;
-    }
+    /* Modals */
+    .modal-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:50;padding:16px}
+    .modal-overlay.open{display:flex}
+    .modal-content{width:100%;max-width:1000px;max-height:92vh;background:#020617;border-radius:16px;padding:10px;box-shadow:0 24px 48px rgba(0,0,0,.4);position:relative;display:flex;flex-direction:column;align-items:center}
+    .modal-close{position:absolute;top:8px;right:10px;border:none;background:rgba(15,23,42,.7);color:#e5e7eb;border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+    .modal-close:hover{background:rgba(239,68,68,.7)}
+    .modal-caption{margin-top:8px;font-size:12px;color:#e5e7eb;text-align:center}
 
-    .pdf-inline-title{
-      font-size:13px;
-      font-weight:800;
-      color:#065f46;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:60%;
-    }
+    #gif-modal img{width:100%;max-width:1200px;max-height:80vh;border-radius:10px;display:block;object-fit:contain}
 
-    .pdf-inline-actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
+    #pdf-modal .modal-content{background:#fff}
+    #pdf-modal-frame{width:100%;height:80vh;border:none;display:block;border-radius:10px;background:#f9fafb}
+    #pdf-modal-actions{margin-top:10px;text-align:center;width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    #pdf-modal-download{padding:10px 14px;background:#1C8B3C;color:white;border-radius:999px;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px rgba(28,139,60,.15)}
 
-    .pdf-inline-btn{
-      border:none;
-      background:#1C8B3C;
-      color:#fff;
-      padding:6px 12px;
-      font-size:12px;
-      border-radius:999px;
-      cursor:pointer;
-      font-weight:800;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-    }
+    /* ===== EMBED MODE ===== */
+    body.embed-mode{background:#fff}
+    body.embed-mode .wrapper{padding:6px 8px 8px}
+    body.embed-mode .top-row{display:none}
+    body.embed-mode .chat-area{margin-top:0}
+    body.embed-mode .side-avatar{display:none}
+    body.embed-mode .chat-box{border:none;padding:4px 4px;background:transparent;box-shadow:none;border-radius:0}
+    body.embed-mode .messages{padding:6px 4px}
+    body.embed-mode .msg-row{margin-bottom:8px}
+    body.embed-mode .bubble{font-size:14px;padding:9px 13px;border-radius:16px;max-width:90%}
+    body.embed-mode .input-row{min-height:44px;border-radius:12px}
+    body.embed-mode .input-row input{padding:9px 14px;font-size:14px}
+    body.embed-mode .input-row button{padding:0 18px;font-size:14px;min-width:72px}
+    body.embed-mode .status-line{font-size:11px;margin-top:3px}
+    body.embed-mode .gif-thumb{max-width:100%}
+    body.embed-mode .pdf-inline-frame{height:280px}
 
-    .pdf-inline-btn.secondary{
-      background:#ffffff;
-      color:#1C8B3C;
-      border:1px solid #1C8B3C;
+    @media(max-width:720px){
+      .top-right{display:none}
+      .chat-area{flex-direction:column}
+      .side-avatar{display:none}
+      .pdf-inline-title{max-width:55%}
+      .pdf-inline-frame{height:360px}
     }
-
-    .pdf-inline-frame{
-      width:100%;
-      height:420px;
-      border:none;
-      background:#f9fafb;
-      display:block;
-    }
-
-    /* input */
-    .input-row{
-      display:flex;
-      align-items:stretch;
-      border-radius:16px;
-      border:2px solid var(--border);
-      overflow:hidden;
-      background:var(--card);
-      box-shadow:0 4px 12px rgba(0,0,0,0.06);
-      transition:all 0.2s ease;
-      min-height:56px;
-    }
-    .input-row:focus-within{
-      border-color:var(--accent);
-      box-shadow:0 6px 20px rgba(28,139,60,0.2);
-      transform:translateY(-1px);
-    }
-    .input-row input{
-      flex:1;border:none;padding:16px 20px;font-size:16px;outline:none;
-      background:transparent;color:var(--text);
-      line-height:1.5;
-    }
-    .input-row input::placeholder{color:var(--muted-light);font-weight:400;}
-    .input-row button{
-      border:none;padding:0 32px;background:linear-gradient(135deg, var(--green) 0%, var(--accent-hover) 100%);
-      color:#fff;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;
-      transition:all 0.2s ease;box-shadow:0 2px 8px rgba(28,139,60,0.25);
-      min-width:120px;
-    }
-    .input-row button:hover{
-      transform:translateY(-1px);
-      box-shadow:0 4px 16px rgba(28,139,60,0.35);
-    }
-    .input-row button:active{transform:translateY(0);}
-    .input-row button:disabled{opacity:.6;cursor:not-allowed;transform:none;}
-    .status-line{font-size:13px;color:var(--muted);text-align:right;margin-top:6px;font-weight:500;padding-right:4px;}
-
-    /* Indicador "escrevendo..." */
-    .typing-indicator{
-      background:var(--green);
-      color:#f9fafb;
-      padding:10px 14px;
-      display:flex;
-      gap:4px;
-      align-items:center;
-    }
-    .typing-dot{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.7);
-      animation:typing 1.4s infinite;
-    }
-    .typing-dot:nth-child(2){animation-delay:0.2s;}
-    .typing-dot:nth-child(3){animation-delay:0.4s;}
-    @keyframes typing{
-      0%,60%,100%{transform:translateY(0);opacity:0.7;}
-      30%{transform:translateY(-8px);opacity:1;}
-    }
-
-    /* Botão WhatsApp */
-    .whatsapp-support-btn{
-      display:inline-block;
-      margin-top:12px;
-      padding:10px 16px;
-      background:#25D366;
-      color:#fff;
-      border-radius:8px;
-      text-decoration:none;
-      font-weight:600;
-      font-size:14px;
-      transition:all 0.2s ease;
-      box-shadow:0 2px 8px rgba(37,211,102,0.3);
-    }
-    .whatsapp-support-btn:hover{
-      background:#20BA5A;
-      transform:translateY(-2px);
-      box-shadow:0 4px 12px rgba(37,211,102,0.4);
-    }
-
-    @media (max-width:720px){
-      body{padding:0;}
-      .wrapper{padding:16px;}
-      .top-right{display:none;}
-      .chat-area{flex-direction:column;}
-      .side-avatar{display:none;}
-      .pdf-inline-title{max-width:55%;}
-      .pdf-inline-frame{height:360px;}
-    }
-
-    /* MODAIS */
-    .modal-overlay{
-      position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-      background:rgba(15,23,42,0.55);z-index:50;
-      padding:16px;
-    }
-    .modal-overlay.open{display:flex;}
-    .modal-content{
-      width:100%;
-      max-width:1000px;
-      max-height:92vh;
-      background:#020617;
-      border-radius:14px;
-      padding:10px 10px 12px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.6);
-      position:relative;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-    }
-    .modal-close{
-      position:absolute;top:8px;right:10px;border:none;background:rgba(15,23,42,0.8);
-      color:#e5e7eb;border-radius:999px;width:30px;height:30px;cursor:pointer;
-      font-size:18px;display:flex;align-items:center;justify-content:center;
-    }
-    .modal-caption{margin-top:8px;font-size:12px;color:#e5e7eb;text-align:center;}
-
-    #gif-modal img{
-      width:100%;
-      max-width:1200px;
-      max-height:80vh;
-      border-radius:10px;
-      display:block;
-      object-fit:contain;
-    }
-
-    #pdf-modal .modal-content{background:#ffffff;}
-    #pdf-modal-frame{
-      width:100%;
-      height:80vh;
-      border:none;
-      display:block;
-      border-radius:10px;
-      background:#f9fafb;
-    }
-    #pdf-modal-actions{
-      margin-top:10px;
-      text-align:center;
-      width:100%;
-      display:flex;
-      justify-content:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    #pdf-modal-download{
-      padding:10px 14px;background:#1C8B3C;color:white;border-radius:999px;
-      text-decoration:none;font-size:13px;font-weight:800;
-      border:1px solid rgba(0,0,0,0.08);
-      box-shadow:0 10px 18px rgba(28,139,60,0.18);
-    }
-
-    /* ====== RESOLUÇÃO (SIM/NÃO) ====== */
-    .resolve-card{
-      margin-top:12px;
-      background:var(--card);
-      border:2px solid var(--border-light);
-      border-radius:16px;
-      padding:14px 16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      flex-wrap:wrap;
-      box-shadow:0 2px 8px rgba(0,0,0,0.04);
-    }
-    .resolve-text{font-size:14px;color:var(--text);font-weight:600;letter-spacing:-0.01em;}
-    .resolve-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
-    .resolve-btn{
-      border:none;border-radius:12px;padding:10px 18px;font-size:14px;
-      font-weight:600;cursor:pointer;transition:all 0.2s ease;
-      box-shadow:0 2px 6px rgba(0,0,0,0.1);
-    }
-    .resolve-btn:hover{
-      transform:translateY(-2px);
-      box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    }
-    .resolve-btn:active{transform:translateY(0);}
-    .resolve-yes{background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);color:#fff;}
-    .resolve-no{background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:#fff;}
   </style>
 </head>
 
-<body>
-  <div class="wrapper">
-    <div class="top-row">
-      <div class="top-left">
-        <div class="avatar"><img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" /></div>
+<body class="h-screen w-screen m-0 p-0 bg-gradient-to-br from-brand-50 via-slate-50 to-sky-50 font-sans text-gray-900 flex items-stretch justify-stretch overflow-hidden antialiased">
+
+  <div class="wrapper w-full h-full bg-white flex flex-col overflow-hidden p-5 sm:p-6">
+
+    <!-- Top Row -->
+    <div class="top-row flex items-center justify-between gap-4 pb-4 border-b-2 border-gray-100 mb-1">
+      <div class="top-left flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/20 hover:scale-105 transition-transform">
+          <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" class="w-full h-full object-cover" />
+        </div>
         <div>
-          <p class="top-text-title">Assistente Virtual</p>
-          <p class="top-text-name">Urânia +</p>
+          <p class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Assistente Virtual</p>
+          <p class="text-xl font-bold text-gray-900 tracking-tight mt-0.5">Urânia +</p>
         </div>
       </div>
+      <div class="top-right text-xs text-gray-400 font-medium"></div>
     </div>
 
-    <div class="chat-area">
-      <div class="side-avatar"><div class="side-avatar-inner"><img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" /></div></div>
+    <!-- Chat Area -->
+    <div class="chat-area mt-4 flex gap-3 items-start flex-1 min-h-0">
+      <div class="side-avatar">
+        <div class="side-avatar-inner">
+          <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" />
+        </div>
+      </div>
 
-      <div class="chat-box">
+      <div class="chat-box flex-1 rounded-2xl border border-gray-100 p-4 bg-gray-50/50 flex flex-col gap-3 min-h-0 max-h-full shadow-inner shadow-gray-100/50">
         <div id="chat-messages" class="messages"></div>
 
-        <div class="input-row">
-          <input id="chat-input" type="text" placeholder="Digite sua mensagem aqui..." />
-          <button id="chat-send">Enviar</button>
+        <div class="input-row flex items-stretch rounded-2xl border-2 border-gray-200 overflow-hidden bg-white shadow-sm transition-all duration-200 min-h-[54px] focus-within:border-brand-500 focus-within:shadow-md focus-within:shadow-brand-100/50 focus-within:-translate-y-px">
+          <input id="chat-input" type="text"
+            class="flex-1 border-none px-5 py-4 text-[15px] outline-none bg-transparent text-gray-900 placeholder:text-gray-400"
+            placeholder="Digite sua mensagem aqui..." />
+          <button id="chat-send"
+            class="border-none px-8 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed min-w-[110px]">
+            Enviar
+          </button>
         </div>
 
-        <div id="chat-status" class="status-line">Pronto para responder.</div>
+        <div id="chat-status" class="status-line text-xs text-gray-400 text-right mt-1 font-medium pr-1">Pronto para responder.</div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL PARA GIF -->
+  <!-- MODAL GIF -->
   <div id="gif-modal" class="modal-overlay">
     <div class="modal-content">
       <button id="gif-modal-close" class="modal-close">&times;</button>
@@ -471,7 +180,7 @@
     </div>
   </div>
 
-  <!-- MODAL PARA PDF -->
+  <!-- MODAL PDF -->
   <div id="pdf-modal" class="modal-overlay">
     <div class="modal-content">
       <button id="pdf-modal-close" class="modal-close">&times;</button>
@@ -500,21 +209,57 @@
 
   let chatHistory = [];
 
+  const isEmbedded = new URLSearchParams(window.location.search).has("embed");
+  if (isEmbedded) document.body.classList.add("embed-mode");
+
+  let messageLog = [];
+  let _isRestoring = false;
+
+  function saveChat(){
+    try {
+      sessionStorage.setItem("ucw_msgs", JSON.stringify(messageLog));
+      sessionStorage.setItem("ucw_hist", JSON.stringify(chatHistory));
+    } catch(_){}
+  }
+
+  function restoreChat(){
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("ucw_msgs"));
+      const hist = JSON.parse(sessionStorage.getItem("ucw_hist"));
+      if(saved && saved.length > 0){
+        _isRestoring = true;
+        messageLog = saved;
+        chatHistory = hist || [];
+        saved.forEach(m => addMessage(m.who, m.text, m.attachments || [], m.needsHumanSupport || false, false));
+        _isRestoring = false;
+        return true;
+      }
+    } catch(_){}
+    return false;
+  }
+
+  function notifyParent(type, data){
+    if(window.parent !== window){
+      try { window.parent.postMessage(Object.assign({type: type}, data || {}), "*"); } catch(_){}
+    }
+  }
+
   function scrollToBottom(){
     chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior:"smooth" });
   }
 
   function getOrCreateSessionId(){
-    let sessionId = localStorage.getItem("chat_session_id");
+    const store = isEmbedded ? sessionStorage : localStorage;
+    const key = "chat_session_id";
+    let sessionId = store.getItem(key);
     if(!sessionId){
       const raw = (crypto.randomUUID ? crypto.randomUUID() : (String(Date.now()) + Math.random()));
       sessionId = raw.toString().replaceAll("-", "");
-      localStorage.setItem("chat_session_id", sessionId);
+      store.setItem(key, sessionId);
     }
     return sessionId;
   }
 
-  // ====== MODAL GIF ======
   function openGifModal(url, name){
     gifModalImg.src = url;
     gifModalCaption.textContent = name || "Pré-visualização do GIF";
@@ -528,7 +273,6 @@
   gifModalClose.addEventListener("click", closeGifModal);
   gifModal.addEventListener("click", (e)=>{ if(e.target === gifModal) closeGifModal(); });
 
-  // ====== MODAL PDF ======
   function openPdfModal(url, name){
     pdfModalFrame.src = url + "#toolbar=1";
     pdfModalDownload.href = url;
@@ -542,7 +286,6 @@
   pdfModalClose.addEventListener("click", closePdfModal);
   pdfModal.addEventListener("click", (e)=>{ if(e.target === pdfModal) closePdfModal(); });
 
-  // ====== UI ======
   function renderAttachments(containerEl, attachments=[]){
     if(!attachments || attachments.length === 0) return;
 
@@ -604,7 +347,6 @@
     containerEl.appendChild(attDiv);
   }
 
-  // Indicador "escrevendo..."
   function showTypingIndicator(){
     const row = document.createElement("div");
     row.className = "msg-row bot typing-indicator-row";
@@ -635,7 +377,6 @@
     if(indicator) indicator.remove();
   }
 
-  // Efeito de digitação em tempo real
   function typeText(element, text, speed = 30, callback){
     element.textContent = "";
     let i = 0;
@@ -655,7 +396,6 @@
     const row = document.createElement("div");
     row.className = "msg-row " + who;
 
-    // Adiciona avatar para mensagens do bot
     if (who === "bot") {
       const avatarDiv = document.createElement("div");
       avatarDiv.className = "side-avatar";
@@ -673,7 +413,6 @@
     bubble.className = "bubble " + who;
     
     if(animateTyping && who === "bot" && text){
-      // Inicia vazio, será preenchido pela animação
       bubble.textContent = "";
       typeText(bubble, text, 30, () => {
         renderAttachments(bubble, attachments);
@@ -692,20 +431,28 @@
     row.appendChild(bubble);
     chatMessages.appendChild(row);
     scrollToBottom();
+
+    if(!_isRestoring){
+      messageLog.push({who: who, text: text, attachments: attachments || [], needsHumanSupport: needsHumanSupport || false});
+      saveChat();
+      if(who === "bot") notifyParent("ucw-new-message");
+    }
+
     return bubble;
   }
 
-  // Botão WhatsApp para suporte humano
+  let whatsappNumber = "";
+
   function addWhatsAppButton(container){
+    if(!whatsappNumber) return;
     const whatsappBtn = document.createElement("a");
-    whatsappBtn.href = "https://wa.me/5541998306017";
+    whatsappBtn.href = "https://wa.me/" + whatsappNumber;
     whatsappBtn.target = "_blank";
     whatsappBtn.className = "whatsapp-support-btn";
-    whatsappBtn.innerHTML = '💬 Falar com Suporte no WhatsApp';
+    whatsappBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px;margin-top:-1px"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Falar com Suporte no WhatsApp';
     container.appendChild(whatsappBtn);
   }
 
-  // ====== FEEDBACK (RESOLVEU?) ======
   async function sendFeedback(resolved){
     const sessionId = getOrCreateSessionId();
     const res = await fetch("/chat/feedback", {
@@ -720,11 +467,9 @@
   }
 
   function addResolveCard(afterRowEl){
-    // Cria uma nova linha para o card de feedback (não dentro da bolha)
     const resolveRow = document.createElement("div");
     resolveRow.className = "msg-row bot";
     
-    // Adiciona avatar vazio para alinhamento
     const avatarDiv = document.createElement("div");
     avatarDiv.className = "side-avatar";
     resolveRow.appendChild(avatarDiv);
@@ -741,11 +486,11 @@
 
     const yesBtn = document.createElement("button");
     yesBtn.className = "resolve-btn resolve-yes";
-    yesBtn.textContent = "✅ Sim";
+    yesBtn.textContent = "Sim";
 
     const noBtn = document.createElement("button");
     noBtn.className = "resolve-btn resolve-no";
-    noBtn.textContent = "❌ Não";
+    noBtn.textContent = "Não";
 
     actions.appendChild(yesBtn);
     actions.appendChild(noBtn);
@@ -759,7 +504,7 @@
       lock();
       try{
         await sendFeedback(true);
-        card.innerHTML = `<div class="resolve-text">Obrigado! ✅ Registramos sua resposta.</div>`;
+        card.innerHTML = `<div class="resolve-text">Obrigado! Registramos sua resposta.</div>`;
         setTimeout(()=>resolveRow.remove(), 1500);
       }catch(e){
         console.error(e);
@@ -772,7 +517,7 @@
       lock();
       try{
         await sendFeedback(false);
-        card.innerHTML = `<div class="resolve-text">Obrigado! ❗ Vamos melhorar para a próxima.</div>`;
+        card.innerHTML = `<div class="resolve-text">Obrigado! Vamos melhorar para a próxima.</div>`;
         setTimeout(()=>resolveRow.remove(), 1700);
       }catch(e){
         console.error(e);
@@ -782,13 +527,10 @@
     });
 
     resolveRow.appendChild(card);
-    
-    // Adiciona a linha DEPOIS da linha da mensagem do bot
     afterRowEl.parentNode.insertBefore(resolveRow, afterRowEl.nextSibling);
     scrollToBottom();
   }
 
-  // ====== CHAT ======
   async function sendChat(){
     const text = chatInput.value.trim();
     if(!text) return;
@@ -801,7 +543,6 @@
     chatSend.disabled = true;
     chatStatus.textContent = "Consultando IA...";
     
-    // Mostra indicador "escrevendo..."
     const typingRow = showTypingIndicator();
 
     try{
@@ -812,15 +553,13 @@
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
           message: text,
-          session_id: sessionId,   // compatível com o backend
+          session_id: sessionId,
           history: chatHistory
         })
       });
 
       if(!res.ok){
-        // Se for erro 503 (Service Unavailable), significa que OpenAI está indisponível
         if(res.status === 503){
-          // Verifica o status novamente para obter a mensagem de erro
           const statusData = await checkChatStatus();
           const errorMsg = statusData.error_message || "Serviço temporariamente indisponível";
           throw new Error(`SERVICE_UNAVAILABLE:${errorMsg}`);
@@ -831,24 +570,20 @@
 
       const data = await res.json();
       
-      // Remove indicador "escrevendo..."
       removeTypingIndicator();
 
-      // Adiciona mensagem com animação de digitação
       const botBubble = addMessage(
         "bot", 
         data.reply || "", 
         data.attachments || [],
         data.needs_human_support || false,
-        true // animar digitação
+        true
       );
       chatHistory.push({ role:"assistant", content: data.reply || "" });
 
       if (data.should_ask_resolution === true) {
-        // Encontra a linha (row) da mensagem do bot para adicionar o card depois
         const botRow = botBubble.closest(".msg-row");
         if(botRow){
-          // Aguarda um pouco para a animação terminar antes de mostrar o card
           setTimeout(() => {
             addResolveCard(botRow);
           }, (data.reply || "").length * 30 + 500);
@@ -860,34 +595,27 @@
       console.error("Erro no chat:", err);
       removeTypingIndicator();
       
-      // Verifica se é erro de serviço indisponível
       const errMsg = err.message || String(err);
       if(errMsg.startsWith("SERVICE_UNAVAILABLE:")){
-        // Extrai a mensagem de erro específica
         const errorDetail = errMsg.replace("SERVICE_UNAVAILABLE:", "");
         
-        // Bloqueia o chat
         chatInput.disabled = true;
         chatSend.disabled = true;
         chatStatus.textContent = "Serviço temporariamente indisponível";
         
-        // Exibe mensagem clara de aviso
         addMessage(
           "bot",
-          "⚠️ O serviço de chat está temporariamente indisponível.\n\n" +
+          "O serviço de chat está temporariamente indisponível.\n\n" +
           errorDetail + "\n\n" +
           "Por favor, tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte."
         );
         
-        // Verifica o status periodicamente para quando voltar
         checkStatusPeriodically();
       } else {
-        // Outros erros - mensagem genérica
         addMessage("bot", "Houve um erro ao processar sua mensagem. Por favor, tente novamente.");
         chatStatus.textContent = "Erro de conexão.";
       }
     } finally {
-      // Só reabilita se não for erro de serviço indisponível
       if(!chatInput.disabled){
         chatSend.disabled = false;
       }
@@ -899,12 +627,12 @@
     if(e.key === "Enter"){ e.preventDefault(); sendChat(); }
   });
 
-  // ====== VERIFICAÇÃO DE STATUS DO SERVIÇO ======
   async function checkChatStatus(){
     try{
       const res = await fetch("/chat/status");
       if(!res.ok) throw new Error("Erro ao verificar status");
       const data = await res.json();
+      if(data.whatsapp_number) whatsappNumber = data.whatsapp_number;
       return data;
     }catch(err){
       console.error("Erro ao verificar status:", err);
@@ -912,63 +640,62 @@
     }
   }
 
-  // Verifica status periodicamente quando o serviço está indisponível
   let statusCheckInterval = null;
   
   function checkStatusPeriodically(){
-    // Limpa intervalo anterior se existir
     if(statusCheckInterval){
       clearInterval(statusCheckInterval);
     }
     
-    // Verifica a cada 30 segundos
     statusCheckInterval = setInterval(async () => {
       const status = await checkChatStatus();
       if(status.available){
-        // Serviço voltou! Reabilita o chat
         clearInterval(statusCheckInterval);
         statusCheckInterval = null;
         
         chatInput.disabled = false;
         chatSend.disabled = false;
         chatStatus.textContent = "Serviço restaurado! Pronto para conversar.";
+        notifyParent("ucw-status", { available: true });
         
         addMessage(
           "bot",
-          "✅ O serviço foi restaurado! Agora posso ajudá-lo novamente.\n\n" +
+          "O serviço foi restaurado! Agora posso ajudá-lo novamente.\n\n" +
           "Como posso ajudá-lo hoje?"
         );
       }
-    }, 30000); // Verifica a cada 30 segundos
+    }, 30000);
   }
 
-  // Verifica status na inicialização
   (async function init(){
+    const restored = restoreChat();
     const status = await checkChatStatus();
-    
+
+    notifyParent("ucw-status", { available: status.available !== false });
+
     if(!status.available){
-      // Serviço indisponível - bloqueia o chat
       chatInput.disabled = true;
       chatSend.disabled = true;
       chatStatus.textContent = "Serviço temporariamente indisponível";
-      
-      // Mensagem de erro clara
-      addMessage(
-        "bot",
-        "⚠️ O serviço de chat está temporariamente indisponível.\n\n" +
-        (status.error_message || "Por favor, tente novamente mais tarde.") +
-        "\n\nSe o problema persistir, entre em contato com o suporte."
-      );
-      
-      // Inicia verificação periódica
+
+      if(!restored){
+        addMessage(
+          "bot",
+          "O serviço de chat está temporariamente indisponível.\n\n" +
+          (status.error_message || "Por favor, tente novamente mais tarde.") +
+          "\n\nSe o problema persistir, entre em contato com o suporte."
+        );
+      }
+
       checkStatusPeriodically();
     } else {
-      // Serviço disponível - mensagem inicial normal
-      addMessage(
-        "bot",
-        "Olá! 👋 Sou o assistente virtual deste ambiente de testes.\n" +
-        "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
-      );
+      if(!restored){
+        addMessage(
+          "bot",
+          "Olá! Sou o assistente virtual deste ambiente de testes.\n" +
+          "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
+        );
+      }
     }
   })();
 </script>

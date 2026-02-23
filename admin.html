@@ -2,1616 +2,358 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
   <title>Painel do Chatbot Urania +</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',
+              500:'#22c55e',600:'#1C8B3C',700:'#15803d',800:'#166534',900:'#14532d'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','BlinkMacSystemFont','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-    --bg: #f5f7fb;
-    --bg-secondary: #ffffff;
-    --card-bg: #ffffff;
-    --card-radius: 14px;
-    --border: #e2e8f0;
-    --border-light: #f3f4f6;
-    --primary: #1f2933;
-    --primary-light: #374151;
-    --muted: #6b7280;
-    --muted-light: #9ca3af;
-    --accent: #1C8B3C;
-    --accent-hover: #16a34a;
-    --accent-light: #f0fdf4;
-    --success: #1C8B3C;
-    --error: #ef4444;
-    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-* { 
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", "Helvetica Neue", sans-serif;
-    background: var(--bg-secondary);
-    color: var(--primary);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    line-height: 1.5;
-}
-
-/* SHELL + TOPBAR */
-.shell {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg-secondary);
-}
-
-.topbar {
-    padding: 16px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.top-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.logo-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: #ffffff;
-    transition: background-color 0.2s ease;
-}
-
-.logo-circle:hover {
-    background: var(--accent-hover);
-}
-
-.top-titles h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--primary);
-}
-
-.top-titles p {
-    margin: 2px 0 0;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 400;
-}
-
-.top-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.pill-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: var(--accent-light);
-    color: var(--accent);
-    border: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.pill-status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-}
-
-.top-links a {
-    color: var(--muted);
-    text-decoration: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    font-size: 13px;
-    transition: all 0.2s ease;
-}
-
-.top-links a:hover {
-    background: var(--bg-secondary);
-    color: var(--primary);
-}
-
-.backup-btn {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    color: #ffffff !important;
-    font-weight: 600;
-    border: 1px solid var(--accent);
-    box-shadow: 0 2px 8px rgba(28, 139, 60, 0.2);
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.backup-btn:hover {
-    background: linear-gradient(135deg, var(--accent-hover) 0%, #15803d 100%) !important;
-    color: #ffffff !important;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(28, 139, 60, 0.3);
-}
-
-.backup-btn:active {
-    transform: translateY(0);
-}
-
-.backup-btn.loading {
-    opacity: 1 !important;
-    cursor: wait !important;
-    pointer-events: none !important;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%) !important;
-    color: #ffffff !important;
-    animation: downloadPulse 1.5s ease-in-out infinite !important;
-    position: relative;
-    z-index: 2;
-}
-
-/* Animação de download - Pulso */
-@keyframes downloadPulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-        box-shadow: 0 2px 8px rgba(28, 139, 60, 0.2);
-    }
-    50% {
-        opacity: 0.9;
-        transform: scale(1.02);
-        box-shadow: 0 4px 16px rgba(28, 139, 60, 0.4);
-    }
-}
-
-/* Animação de brilho deslizante */
-.backup-btn.loading::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(255, 255, 255, 0.4) 50%, 
-        transparent 100%);
-    animation: downloadShimmer 2s ease-in-out infinite;
-    z-index: 1;
-}
-
-@keyframes downloadShimmer {
-    0% {
-        left: -100%;
-    }
-    100% {
-        left: 100%;
-    }
-}
-
-/* Ícone de loading girando */
-.backup-btn.loading::after {
-    content: '⏳';
-    display: inline-block;
-    animation: downloadSpin 1.2s linear infinite;
-    margin-left: 8px;
-    position: relative;
-    z-index: 2;
-}
-
-@keyframes downloadSpin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* ====== MODAL DE DOWNLOAD ====== */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.backup-download-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(8px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-}
-
-.backup-download-modal.active {
-    display: flex;
-}
-
-.backup-download-content {
-    background: var(--card-bg);
-    border-radius: 20px;
-    padding: 40px;
-    max-width: 400px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.4s ease;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.backup-download-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 24px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.backup-download-spinner {
-    width: 80px;
-    height: 80px;
-    border: 6px solid var(--border-light);
-    border-top-color: var(--accent);
-    border-right-color: var(--accent);
-    border-radius: 50%;
-    animation: downloadSpin 1s linear infinite;
-    margin: 0 auto;
-}
-
-.backup-download-title {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 12px;
-    letter-spacing: -0.02em;
-}
-
-.backup-download-message {
-    font-size: 16px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    line-height: 1.6;
-}
-
-.backup-download-progress {
-    margin-top: 24px;
-    height: 6px;
-    background: var(--border-light);
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-}
-
-.backup-download-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-    border-radius: 10px;
-    width: 0%;
-    animation: progressPulse 1.5s ease-in-out infinite;
-    transition: width 0.3s ease;
-}
-
-@keyframes progressPulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-}
-
-.backup-download-status {
-    font-size: 14px;
-    color: var(--muted-light);
-    margin-top: 16px;
-    font-weight: 500;
-}
-
-@media (max-width: 900px) {
-    .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 16px 18px 8px;
-    }
-    .top-right {
-    width: 100%;
-    justify-content: space-between;
-    }
-}
-
-/* CONTEÚDO PRINCIPAL */
-main {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 0 16px 32px;
-}
-
-.page {
-    width: 100%;
-    max-width: 1200px;
-    margin-top: 10px;
-}
-
-/* ESTATÍSTICAS */
-.stats-card {
-    padding: 24px;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-}
-
-@media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: var(--bg-secondary);
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    transition: all 0.2s ease;
-}
-
-.stat-item:hover {
-    border-color: var(--accent);
-    background: var(--accent-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
-}
-
-.stat-item-full {
-    grid-column: 1 / -1;
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-
-.stat-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.stat-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.02em;
-}
-
-.page-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.page-subtitle {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-}
-
-.card {
-    background: var(--card-bg);
-    border-radius: var(--card-radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-xs);
-    padding: 32px;
-    margin-bottom: 24px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-}
-
-.card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--accent);
-    border-radius: var(--card-radius) var(--card-radius) 0 0;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--accent);
-    transform: translateY(-2px);
-}
-
-.card:hover::before {
-    opacity: 1;
-}
-
-.card h2 {
-    margin: 0 0 8px;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--primary);
-    letter-spacing: -0.01em;
-}
-
-.card p.card-desc {
-    margin: 0 0 24px;
-    font-size: 14px;
-    color: var(--muted);
-    line-height: 1.5;
-}
-
-/* PROMPT */
-#prompt-text {
-    width: 100%;
-    min-height: 200px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    padding: 14px 16px;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: vertical;
-    outline: none;
-    background: var(--bg);
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-#prompt-text:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
-    background: var(--bg);
-}
-
-.btn {
-    border: none;
-    border-radius: 999px;
-    padding: 9px 18px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: transform .08s ease, box-shadow .12s ease, background .12s ease;
-}
-
-.btn-primary {
-    background: var(--accent);
-    color: #ffffff;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-    background: var(--accent-hover);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-}
-
-.btn:disabled {
-    opacity: .6;
-    cursor: not-allowed;
-    box-shadow: none;
-}
-
-.status-text {
-    display: inline-block;
-    margin-left: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: all 0.3s ease;
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: transparent;
-}
-
-.status-text.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.status-text.error { 
-    color: var(--error);
-    background: #fef2f2;
-    animation: shake 0.5s ease;
-}
-
-.status-text.success {
-    color: #16a34a;
-    background: #f0fdf4;
-    animation: slideInSuccess 0.4s ease;
-}
-
-@keyframes slideInSuccess {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
-.label {
-    display: block;
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: #374151;
-}
-
-.helper {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 4px;
-}
-
-/* FORM RECURSOS */
-.resource-form-box {
-    background: linear-gradient(to bottom, var(--bg-secondary), var(--bg));
-    border-radius: var(--card-radius);
-    padding: 28px;
-    border: 1px solid var(--border);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.resource-form-box::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.resource-form-box:hover::before {
-    opacity: 1;
-}
-
-.resource-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-@media (max-width: 700px) {
-    .resource-grid {
-    grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-textarea,
-input[type="text"],
-select {
-    width: 100%;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    padding: 10px 12px;
-    font-size: 14px;
-    outline: none;
-    background: var(--bg);
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-textarea:focus,
-input[type="text"]:focus,
-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
-    background: var(--bg);
-}
-
-/* FILE UPLOAD DRAG & DROP */
-.file-upload-wrapper {
-    grid-column: 1 / -1;
-}
-
-.drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 32px;
-    text-align: center;
-    background: var(--bg);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.drop-zone:hover {
-    border-color: var(--accent);
-    background: var(--accent-light);
-}
-
-.drop-zone.drag-over {
-    border-color: var(--accent);
-    background: var(--accent-light);
-    transform: scale(1.02);
-    box-shadow: 0 0 0 4px var(--accent-light);
-}
-
-.drop-zone-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-}
-
-.drop-zone-icon {
-    color: var(--muted);
-    transition: color 0.3s ease;
-}
-
-.drop-zone:hover .drop-zone-icon,
-.drop-zone.drag-over .drop-zone-icon {
-    color: var(--accent);
-}
-
-.drop-zone-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.drop-zone-text-main {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary);
-}
-
-.drop-zone-text-sub {
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.file-input-hidden {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.file-preview {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-.file-preview-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-}
-
-.file-preview-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.file-preview-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.file-preview-size {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 2px;
-}
-
-.file-preview-remove {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: var(--error);
-    color: white;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.file-preview-remove:hover {
-    background: #dc2626;
-    transform: scale(1.1);
-}
-
-.resource-form-footer {
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-/* FILTROS E PESQUISA */
-.filters-section {
-    margin-top: 24px;
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.type-filters {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    border: 2px solid var(--border);
-    background: var(--bg);
-    color: var(--primary);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.filter-btn span {
-    font-size: 16px;
-}
-
-.filter-btn:hover {
-    border-color: var(--accent);
-    background: var(--accent-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
-}
-
-.filter-btn.active {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.filter-btn.active:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-}
-
-/* BARRA DE PESQUISA */
-.search-box {
-    flex: 1;
-}
-
-.search-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.search-icon {
-    position: absolute;
-    left: 16px;
-    color: var(--muted);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.search-input {
-    width: 100%;
-    padding: 12px 16px 12px 48px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    font-size: 14px;
-    background: var(--bg);
-    color: var(--primary);
-    transition: all 0.2s ease;
-    outline: none;
-    font-family: inherit;
-}
-
-.search-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
-    background: var(--bg);
-}
-
-.search-input::placeholder {
-    color: var(--muted);
-}
-
-.clear-search-btn {
-    position: absolute;
-    right: 12px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: var(--muted-light);
-    color: white;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    z-index: 1;
-}
-
-.clear-search-btn:hover {
-    background: var(--muted);
-    transform: scale(1.1);
-}
-
-/* LISTA DE RECURSOS */
-.resource-list-empty {
-    font-size: 14px;
-    color: var(--muted);
-    padding: 40px 20px;
-    text-align: center;
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    border: 2px dashed var(--border);
-}
-
-.resource-list {
-    margin-top: 24px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-}
-
-@media (max-width: 768px) {
-    .resource-list {
-        grid-template-columns: 1fr;
-    }
-}
-
-.resource-item {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 24px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-xs);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.resource-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-}
-
-.resource-item:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--accent);
-    transform: translateY(-4px);
-    background: var(--bg);
-}
-
-.resource-item:hover::before {
-    transform: scaleX(1);
-}
-
-.resource-item-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--border);
-}
-
-.resource-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 28px;
-    flex-shrink: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
-    position: relative;
-    overflow: hidden;
-    font-weight: bold;
-}
-
-.resource-icon::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transform: rotate(45deg);
-    transition: all 0.5s;
-}
-
-.resource-item:hover .resource-icon {
-    transform: rotate(5deg) scale(1.1);
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
-}
-
-.resource-item:hover .resource-icon::before {
-    left: 100%;
-}
-
-.resource-icon.pdf {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-}
-
-.resource-item:hover .resource-icon.pdf {
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
-}
-
-.resource-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.resource-header {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.resource-type-pill {
-    font-size: 12px;
-    padding: 6px 14px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-    color: #3730a3;
-    border: 2px solid #c7d2fe;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 1px;
-    box-shadow: 0 2px 8px rgba(55, 48, 163, 0.15);
-    align-self: flex-start;
-    display: inline-block;
-}
-
-.resource-type-pill.pdf {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    color: #991b1b;
-    border-color: #fecaca;
-    box-shadow: 0 2px 8px rgba(153, 27, 27, 0.15);
-}
-
-.resource-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary);
-    line-height: 1.4;
-    margin-top: 4px;
-    letter-spacing: -0.01em;
-}
-
-.resource-tags {
-    font-size: 14px;
-    color: var(--muted);
-    line-height: 1.6;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 8px 12px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-top: 4px;
-}
-
-.resource-tags::before {
-    content: '🏷️';
-    font-size: 14px;
-    opacity: 0.8;
-}
-
-/* ====== EDIÇÃO INLINE ====== */
-.resource-item.editing {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light), var(--shadow-md);
-    background: var(--bg);
-}
-
-.resource-item.editing::before {
-    transform: scaleX(1);
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-}
-
-.edit-input {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 10px;
-    border: 2px solid var(--accent);
-    font-size: 14px;
-    font-family: inherit;
-    background: var(--bg);
-    color: var(--primary);
-    transition: all 0.2s ease;
-    outline: none;
-    box-shadow: 0 0 0 3px var(--accent-light);
-    margin-top: 8px;
-    display: none;
-}
-
-.edit-input:focus {
-    border-color: var(--accent-hover);
-    box-shadow: 0 0 0 3px var(--accent-light), 0 4px 12px rgba(28, 139, 60, 0.15);
-    transform: translateY(-1px);
-}
-
-.edit-title-input {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.edit-tags-input {
-    font-size: 14px;
-    color: var(--muted);
-    margin-top: 12px;
-}
-
-.edit-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 2px solid var(--border);
-    animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.btn-save-edit {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    color: #ffffff;
-    border: none;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(28, 139, 60, 0.25);
-    flex: 1;
-}
-
-.btn-save-edit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(28, 139, 60, 0.35);
-}
-
-.btn-save-edit:active {
-    transform: translateY(0);
-}
-
-.btn-save-edit:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-cancel-edit {
-    background: var(--bg-secondary);
-    color: var(--muted);
-    border: 1px solid var(--border);
-    font-weight: 500;
-}
-
-.btn-cancel-edit:hover {
-    background: #f3f4f6;
-    color: var(--primary);
-    border-color: var(--muted);
-}
-
-.btn-small {
-    font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-edit {
-    background: var(--accent-light);
-    color: var(--accent);
-    border: 1px solid var(--border);
-    transition: all 0.2s ease;
-    font-weight: 500;
-}
-
-.btn-edit:hover {
-    background: var(--accent);
-    color: #ffffff;
-    border-color: var(--accent);
-}
-
-.btn-delete {
-    background: #fef2f2;
-    color: var(--error);
-    border: 1px solid var(--border);
-    transition: all 0.2s ease;
-    font-weight: 500;
-}
-
-.btn-delete:hover {
-    background: var(--error);
-    color: #ffffff;
-    border-color: var(--error);
-}
-
-.btn-view {
-    background: var(--accent-light);
-    color: var(--accent);
-    border: 1px solid var(--border);
-    transition: all 0.2s ease;
-    font-weight: 500;
-}
-
-.btn-view:hover {
-    background: var(--accent);
-    color: #ffffff;
-    border-color: var(--accent);
-}
-
-/* MODAL DE VISUALIZAÇÃO */
-.file-viewer-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.75);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.file-viewer-modal.active {
-    display: flex;
-}
-
-.file-viewer-content {
-    background: var(--card-bg);
-    border-radius: 16px;
-    max-width: 90vw;
-    max-height: 90vh;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-}
-
-.file-viewer-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--bg-secondary);
-}
-
-.file-viewer-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--primary);
-    flex: 1;
-}
-
-.file-viewer-close {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: var(--border);
-    color: var(--primary);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.file-viewer-close:hover {
-    background: var(--error);
-    color: white;
-}
-
-.file-viewer-body {
-    flex: 1;
-    overflow: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: var(--bg);
-}
-
-.file-viewer-body img {
-    max-width: 100%;
-    max-height: 70vh;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.file-viewer-body iframe {
-    width: 100%;
-    height: 70vh;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-@media (max-width: 600px) {
-    main { padding: 0 10px 24px; }
-    .card { padding: 18px 16px 18px; }
-}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+    @keyframes slideInSuccess{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes downloadPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.9;transform:scale(1.02)}}
+    @keyframes downloadShimmer{0%{left:-100%}100%{left:100%}}
+    @keyframes downloadSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes progressPulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+    .status-text{display:inline-block;margin-left:12px;font-size:13px;font-weight:500;opacity:0;transform:translateX(-10px);transition:all .3s ease;padding:4px 10px;border-radius:6px;background:transparent}
+    .status-text.show{opacity:1;transform:translateX(0)}
+    .status-text.error{color:#ef4444;background:#fef2f2;animation:shake .5s ease}
+    .status-text.success{color:#16a34a;background:#f0fdf4;animation:slideInSuccess .4s ease}
+
+    .resource-list{margin-top:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    @media(max-width:768px){.resource-list{grid-template-columns:1fr}}
+
+    .resource-item{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:all .25s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+    .resource-item::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#1C8B3C,#16a34a);transform:scaleX(0);transition:transform .3s ease}
+    .resource-item:hover{box-shadow:0 8px 24px rgba(0,0,0,.07);border-color:#bbf7d0;transform:translateY(-2px)}
+    .resource-item:hover::before{transform:scaleX(1)}
+
+    .resource-item-header{display:flex;align-items:flex-start;gap:12px;padding-bottom:12px;border-bottom:1px solid #f3f4f6}
+    .resource-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1C8B3C,#16a34a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(28,139,60,.18);transition:all .3s ease;font-weight:bold}
+    .resource-icon.pdf{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 3px 10px rgba(239,68,68,.18)}
+    .resource-item:hover .resource-icon{transform:rotate(3deg) scale(1.05)}
+
+    .resource-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+    .resource-header{display:flex;flex-direction:column;gap:4px}
+    .resource-type-pill{font-size:10px;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,#eff6ff,#e0e7ff);color:#3730a3;border:1px solid #c7d2fe;text-transform:uppercase;font-weight:700;letter-spacing:.8px;align-self:flex-start}
+    .resource-type-pill.pdf{background:linear-gradient(135deg,#fef2f2,#fee2e2);color:#991b1b;border-color:#fecaca}
+    .resource-title{font-size:15px;font-weight:700;color:#111827;line-height:1.3;letter-spacing:-.01em}
+    .resource-tags{font-size:12px;color:#6b7280;line-height:1.4;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 8px;background:#f9fafb;border-radius:6px;border:1px solid #f3f4f6}
+    .resource-tags::before{content:'';display:inline-block;width:14px;height:14px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z'/%3E%3Cline x1='7' y1='7' x2='7.01' y2='7'/%3E%3C/svg%3E");background-repeat:no-repeat;vertical-align:middle;opacity:.7;flex-shrink:0}
+
+    .resource-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-small{font-size:11px;padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:500;transition:all .2s ease;display:inline-flex;align-items:center;gap:4px;font-family:inherit}
+    .btn-view{background:#f0fdf4;color:#1C8B3C;border:1px solid #dcfce7}.btn-view:hover{background:#1C8B3C;color:#fff;border-color:#1C8B3C}
+    .btn-edit{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}.btn-edit:hover{background:#2563eb;color:#fff;border-color:#2563eb}
+    .btn-delete{background:#fef2f2;color:#ef4444;border:1px solid #fecaca}.btn-delete:hover{background:#ef4444;color:#fff;border-color:#ef4444}
+
+    .resource-item.editing{border-color:#1C8B3C;box-shadow:0 0 0 3px #f0fdf4,0 8px 24px rgba(0,0,0,.08);background:#fafffe}
+    .resource-item.editing::before{transform:scaleX(1)}
+    .edit-input{width:100%;padding:10px 14px;border-radius:10px;border:2px solid #1C8B3C;font-size:14px;font-family:inherit;background:#fff;color:#111827;transition:all .2s ease;outline:none;box-shadow:0 0 0 3px #f0fdf4;margin-top:6px;display:none}
+    .edit-input:focus{border-color:#15803d;box-shadow:0 0 0 3px #dcfce7,0 4px 12px rgba(28,139,60,.1)}
+    .edit-title-input{font-size:15px;font-weight:700}
+    .edit-tags-input{font-size:13px;margin-top:6px}
+    .edit-actions{display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #f3f4f6;animation:slideDown .3s ease}
+    .btn-save-edit{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border:none;font-weight:600;box-shadow:0 2px 8px rgba(28,139,60,.2);flex:1}
+    .btn-save-edit:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(28,139,60,.3)}
+    .btn-save-edit:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-cancel-edit{background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb}.btn-cancel-edit:hover{background:#f3f4f6;color:#111827}
+
+    .drop-zone.drag-over{border-color:#1C8B3C;background:#f0fdf4;transform:scale(1.01);box-shadow:0 0 0 4px #dcfce7}
+    .filter-btn.active{background:#1C8B3C;color:#fff;border-color:#1C8B3C;box-shadow:0 4px 12px rgba(28,139,60,.2)}
+    .filter-btn.active:hover{background:#15803d;border-color:#15803d}
+
+    .backup-btn.loading{opacity:1!important;cursor:wait!important;pointer-events:none!important;animation:downloadPulse 1.5s ease-in-out infinite!important;position:relative;z-index:2}
+    .backup-btn.loading::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:downloadShimmer 2s ease-in-out infinite;z-index:1}
+    .backup-btn.loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:downloadSpin 1s linear infinite;margin-left:8px;position:relative;z-index:2}
+
+    .file-viewer-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;padding:20px}
+    .file-viewer-modal.active{display:flex}
+    .file-viewer-content{background:#fff;border-radius:20px;max-width:90vw;max-height:90vh;width:100%;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.2);overflow:hidden}
+    .file-viewer-header{padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#f9fafb}
+    .file-viewer-title{font-size:15px;font-weight:600;color:#111827;flex:1}
+    .file-viewer-close{width:32px;height:32px;border-radius:50%;border:none;background:#e5e7eb;color:#374151;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .file-viewer-close:hover{background:#ef4444;color:#fff}
+    .file-viewer-body{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;background:#f9fafb}
+    .file-viewer-body img{max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .file-viewer-body iframe{width:100%;height:70vh;border:none;border-radius:8px}
+
+    .backup-download-modal{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:10000}
+    .backup-download-modal.active{display:flex}
+    .backup-download-content{background:#fff;border-radius:24px;padding:40px;max-width:400px;width:90%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,.2);animation:slideUp .4s ease}
+    .backup-download-icon{width:80px;height:80px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center}
+    .backup-download-spinner{width:80px;height:80px;border:5px solid #f3f4f6;border-top-color:#1C8B3C;border-right-color:#1C8B3C;border-radius:50%;animation:downloadSpin 1s linear infinite}
+    .backup-download-title{font-size:22px;font-weight:700;color:#111827;margin-bottom:10px;letter-spacing:-.02em}
+    .backup-download-message{font-size:15px;color:#6b7280;margin-bottom:8px;line-height:1.6}
+    .backup-download-progress{margin-top:20px;height:6px;background:#f3f4f6;border-radius:10px;overflow:hidden}
+    .backup-download-progress-bar{height:100%;background:linear-gradient(90deg,#1C8B3C,#16a34a);border-radius:10px;width:0%;animation:progressPulse 1.5s ease-in-out infinite;transition:width .3s ease}
+    .backup-download-status{font-size:13px;color:#9ca3af;margin-top:14px;font-weight:500}
+
+    .resource-list-empty{font-size:14px;color:#6b7280;padding:40px 20px;text-align:center;background:#f9fafb;border-radius:12px;border:2px dashed #e5e7eb}
+
+    .sidebar-section{transition:all .3s ease}
+    .sidebar-section summary{cursor:pointer;list-style:none;user-select:none}
+    .sidebar-section summary::-webkit-details-marker{display:none}
+    .sidebar-section summary .chevron{transition:transform .2s ease}
+    .sidebar-section[open] summary .chevron{transform:rotate(180deg)}
   </style>
 </head>
-<body>
-<div class="shell">
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="top-left">
-      <div class="logo-circle">🤖</div>
-      <div class="top-titles">
-        <h1>Painel do Chatbot Urania +</h1>
-        <p>Configure o comportamento da IA e gerencie os recursos que ela pode usar.</p>
+<body class="min-h-screen bg-gray-50/50 font-sans text-gray-900 antialiased">
+
+<div class="min-h-screen flex flex-col">
+
+  <!-- ============ TOPBAR ============ -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/80">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-brand-700 flex items-center justify-center text-white shadow-md shadow-brand-600/20"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg></div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight text-gray-900 leading-tight">Painel do Chatbot</h1>
+          <p class="text-[11px] text-gray-400 font-medium">Urânia + &middot; Administração</p>
+        </div>
       </div>
-    </div>
-    <div class="top-right">
-      <div class="pill-status">
-        <span class="pill-status-dot"></span>
-        <span>Backend online</span>
-      </div>
-      <div class="top-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/widget" target="_blank">Abrir widget</a>
-        <a href="/docs" target="_blank">API Docs</a>
-        <a href="javascript:void(0)" id="btn-backup" class="backup-btn">💾 Fazer Backup</a>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 text-brand-600 border border-brand-200 text-[11px] font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+          Online
+        </div>
+        <nav class="flex items-center gap-0.5">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Dashboard</a>
+          <a href="/widget" target="_blank" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Widget</a>
+          <a href="/docs" target="_blank" class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">API Docs</a>
+          <a href="javascript:void(0)" id="btn-backup" class="backup-btn ml-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 transition-all shadow-sm hover:shadow-md overflow-hidden relative"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Backup</a>
+        </nav>
       </div>
     </div>
   </header>
 
-  <!-- CONTEÚDO -->
-  <main>
-    <div class="page">
-      <p class="page-subtitle">
-        Ajuste o prompt global do bot e cadastre GIFs e PDFs que podem ser enviados durante o atendimento.
-      </p>
+  <!-- ============ STATS BAR ============ -->
+  <div class="bg-white border-b border-gray-100">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex items-center gap-6 overflow-x-auto">
+        <div class="flex items-center gap-2.5 flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+          <div>
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold leading-tight">PDFs</div>
+            <div id="stat-pdfs" class="text-lg font-extrabold text-gray-900 leading-tight">—</div>
+          </div>
+        </div>
+        <div class="w-px h-8 bg-gray-200 flex-shrink-0"></div>
+        <div class="flex items-center gap-2.5 flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shadow-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <div>
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold leading-tight">GIFs</div>
+            <div id="stat-gifs" class="text-lg font-extrabold text-gray-900 leading-tight">—</div>
+          </div>
+        </div>
+        <div class="w-px h-8 bg-gray-200 flex-shrink-0"></div>
+        <div class="flex items-center gap-2.5 flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-600 to-brand-700 flex items-center justify-center text-white shadow-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+          <div>
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold leading-tight">Espaço</div>
+            <div id="stat-total-size" class="text-lg font-extrabold text-gray-900 leading-tight">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <!-- CARD ESTATÍSTICAS DE ARQUIVOS -->
-      <section class="card stats-card">
-        <h2>Estatísticas de Arquivos</h2>
-        <p class="card-desc">
-          Visão geral dos recursos cadastrados e espaço utilizado.
-        </p>
-        
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-icon">📄</div>
-            <div class="stat-content">
-              <div class="stat-label">PDFs</div>
-              <div id="stat-pdfs" class="stat-value">—</div>
+  <!-- ============ MAIN CONTENT (2-col grid) ============ -->
+  <main class="flex-1">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col lg:flex-row gap-6">
+
+        <!-- ======== LEFT: Resource Library (main area) ======== -->
+        <div class="flex-1 min-w-0 order-2 lg:order-1">
+
+          <!-- Section header + filters -->
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-gray-900">Biblioteca de Recursos</h2>
+              <p class="text-xs text-gray-400 mt-0.5">GIFs e PDFs disponíveis para o chatbot</p>
+            </div>
+            <div class="flex gap-1.5 flex-shrink-0">
+              <button type="button" class="filter-btn active inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="all">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Todos
+              </button>
+              <button type="button" class="filter-btn inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="pdf">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF
+              </button>
+              <button type="button" class="filter-btn inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="gif">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> GIF
+              </button>
             </div>
           </div>
-          
-          <div class="stat-item">
-            <div class="stat-icon">🖼️</div>
-            <div class="stat-content">
-              <div class="stat-label">GIFs</div>
-              <div id="stat-gifs" class="stat-value">—</div>
-            </div>
+
+          <!-- Search bar -->
+          <div class="relative mb-4">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="file-search"
+              class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit] placeholder:text-gray-400"
+              placeholder="Pesquisar por título ou tags..." />
+            <button type="button" id="clear-search"
+              class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-300 text-white text-sm leading-none flex items-center justify-center hover:bg-gray-400 transition-colors cursor-pointer"
+              style="display:none;">×</button>
           </div>
-          
-            <div class="stat-item">
-              <div class="stat-icon">💾</div>
-              <div class="stat-content">
-                <div class="stat-label">Espaço Total Utilizado</div>
-                <div id="stat-total-size" class="stat-value">—</div>
+
+          <!-- Resource List -->
+          <div id="resources-wrapper">
+            <div id="files-empty" class="resource-list-empty">
+              Nenhum recurso cadastrado ainda.
+            </div>
+            <div id="files-list" class="resource-list" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- ======== RIGHT: Sidebar (config panels) ======== -->
+        <div class="w-full lg:w-[380px] flex-shrink-0 order-1 lg:order-2 space-y-4">
+
+          <!-- Prompt Config -->
+          <details class="sidebar-section bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden" open>
+            <summary class="flex items-center justify-between px-5 py-4 hover:bg-gray-50/50 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.26.6.85 1 1.51 1.08H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+                <div>
+                  <h3 class="text-sm font-bold text-gray-900">Prompt do Sistema</h3>
+                  <p class="text-[11px] text-gray-400 mt-0.5">Tom de voz, regras e limitações</p>
+                </div>
+              </div>
+              <svg class="chevron w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="px-5 pb-5 pt-1 border-t border-gray-100">
+              <textarea id="prompt-text"
+                class="w-full min-h-[160px] rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-3 text-[13px] leading-relaxed resize-y outline-none transition-all duration-200 focus:border-brand-500 focus:ring-3 focus:ring-brand-50 focus:bg-white hover:border-gray-300 font-[inherit]"
+                placeholder="Ex: Você é o assistente virtual oficial da empresa X..."></textarea>
+              <div class="mt-3 flex items-center">
+                <button id="btn-save-prompt"
+                  class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-all cursor-pointer shadow-sm hover:shadow-md inline-flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar
+                </button>
+                <span id="prompt-status" class="status-text"></span>
               </div>
             </div>
-        </div>
-      </section>
+          </details>
 
-      <!-- CARD PROMPT -->
-      <section class="card">
-        <h2>Configuração do Prompt</h2>
-        <p class="card-desc">
-          Este é o prompt de sistema do seu assistente. Defina aqui tom de voz, regras, limitações e como ele deve usar os recursos cadastrados.
-        </p>
-
-        <textarea id="prompt-text" placeholder="Ex: Você é o assistente virtual oficial da empresa X..."></textarea>
-
-        <div style="margin-top: 12px;">
-          <button id="btn-save-prompt" class="btn btn-primary">
-            💾 Salvar Prompt
-          </button>
-          <span id="prompt-status" class="status-text"></span>
-        </div>
-      </section>
-
-      <!-- CARD RECURSOS -->
-      <section class="card">
-        <h2>Recursos (GIFs e PDFs)</h2>
-        <p class="card-desc">
-          Cadastre aqui os materiais que o chatbot pode usar para complementar as respostas. Use tags para facilitar a associação com as perguntas.
-        </p>
-
-        <!-- FORM -->
-        <div class="resource-form-box">
-          <form id="upload-form" enctype="multipart/form-data">
-            <div class="resource-grid">
-              <div>
-                <label for="file-type" class="label">Tipo</label>
-                <select id="file-type" name="file_type">
-                  <option value="gif">GIF</option>
-                  <option value="pdf">PDF</option>
-                </select>
-                <p class="helper">
-                  GIFs deixam as interações mais leves; PDFs são ideais para tutoriais, manuais e materiais mais longos.
-                </p>
+          <!-- Upload Form -->
+          <details class="sidebar-section bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden" open>
+            <summary class="flex items-center justify-between px-5 py-4 hover:bg-gray-50/50 transition-colors">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                <div>
+                  <h3 class="text-sm font-bold text-gray-900">Adicionar Recurso</h3>
+                  <p class="text-[11px] text-gray-400 mt-0.5">Upload de PDFs e GIFs</p>
+                </div>
               </div>
+              <svg class="chevron w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="px-5 pb-5 pt-1 border-t border-gray-100">
+              <form id="upload-form" enctype="multipart/form-data" class="space-y-3">
 
-              <div>
-                <label for="file-title" class="label">Título</label>
-                <input id="file-title" name="title" type="text" placeholder="Nome do recurso" />
-                <p class="helper">
-                  Nome amigável que descreve o conteúdo (ex.: Tutorial de alteração de senha).
-                </p>
-              </div>
-
-              <div>
-                <label for="file-tags" class="label">Tags</label>
-                <input id="file-tags" name="tags" type="text" placeholder="Categoria ou tag" />
-                <p class="helper">
-                  Palavras-chave relacionadas (ex.: senha, acesso, login, boleto, cancelamento).
-                </p>
-              </div>
-
-              <div class="file-upload-wrapper">
-                <label class="label">Arquivo</label>
-                <div id="drop-zone" class="drop-zone">
-                  <div class="drop-zone-content">
-                    <svg class="drop-zone-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="17 8 12 3 7 8"></polyline>
-                      <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <p class="drop-zone-text">
-                      <span class="drop-zone-text-main">Arraste e solte o arquivo aqui</span>
-                      <span class="drop-zone-text-sub">ou clique para selecionar</span>
-                    </p>
-                    <input id="file-input" name="file" type="file" required class="file-input-hidden" />
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="file-type" class="block text-[11px] font-semibold text-gray-500 mb-1">Tipo</label>
+                    <select id="file-type" name="file_type"
+                      class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]">
+                      <option value="gif">GIF</option>
+                      <option value="pdf">PDF</option>
+                    </select>
                   </div>
-                  <div id="file-preview" class="file-preview" style="display: none;">
-                    <div class="file-preview-icon">📄</div>
-                    <div class="file-preview-info">
-                      <div class="file-preview-name"></div>
-                      <div class="file-preview-size"></div>
-                    </div>
-                    <button type="button" class="file-preview-remove" onclick="clearFileInput()">×</button>
+                  <div>
+                    <label for="file-title" class="block text-[11px] font-semibold text-gray-500 mb-1">Título</label>
+                    <input id="file-title" name="title" type="text"
+                      class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]"
+                      placeholder="Nome do recurso" />
                   </div>
                 </div>
-                <p class="helper">
-                  Formatos aceitos: PDF ou GIF. Tamanho máximo: 50MB
-                </p>
-              </div>
+
+                <div>
+                  <label for="file-tags" class="block text-[11px] font-semibold text-gray-500 mb-1">Tags</label>
+                  <input id="file-tags" name="tags" type="text"
+                    class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]"
+                    placeholder="senha, acesso, login, boleto" />
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-semibold text-gray-500 mb-1">Arquivo</label>
+                  <div id="drop-zone" class="drop-zone border-2 border-dashed border-gray-200 rounded-xl p-5 text-center bg-gray-50/50 hover:border-brand-400 hover:bg-brand-50/30 transition-all cursor-pointer relative overflow-hidden">
+                    <div class="drop-zone-content flex flex-col items-center gap-2">
+                      <svg class="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      <div>
+                        <p class="text-xs font-semibold text-gray-600">Arraste ou clique para enviar</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">PDF ou GIF &middot; Máx. 50MB</p>
+                      </div>
+                      <input id="file-input" name="file" type="file" required class="file-input-hidden absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    </div>
+                    <div id="file-preview" class="file-preview items-center gap-3 px-3 py-2.5 bg-white rounded-lg border border-gray-200" style="display:none;">
+                      <div class="file-preview-icon flex-shrink-0 text-gray-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="file-preview-name text-xs font-medium text-gray-900 truncate"></div>
+                        <div class="file-preview-size text-[10px] text-gray-400 mt-0.5"></div>
+                      </div>
+                      <button type="button" class="file-preview-remove w-5 h-5 rounded-full bg-red-500 text-white text-sm leading-none flex items-center justify-center hover:bg-red-600 transition-colors flex-shrink-0 cursor-pointer" onclick="clearFileInput()">×</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 pt-1">
+                  <button type="submit" id="btn-upload"
+                    class="flex-1 py-2.5 rounded-lg text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-all cursor-pointer shadow-sm hover:shadow-md inline-flex items-center justify-center gap-1.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px;margin-top:-1px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar
+                  </button>
+                  <span id="upload-status" class="status-text" style="margin-left:0"></span>
+                </div>
+              </form>
             </div>
+          </details>
 
-            <div class="resource-form-footer">
-              <button type="submit" id="btn-upload" class="btn btn-primary">
-                ➕ Adicionar recurso
-              </button>
-              <span id="upload-status" class="status-text"></span>
-            </div>
-          </form>
         </div>
-
-        <!-- FILTROS E PESQUISA -->
-        <div class="filters-section">
-          <!-- Filtros por Tipo -->
-          <div class="type-filters">
-            <button type="button" class="filter-btn active" data-filter="all">
-              <span>📁</span> Todos
-            </button>
-            <button type="button" class="filter-btn" data-filter="pdf">
-              <span>📄</span> PDF
-            </button>
-            <button type="button" class="filter-btn" data-filter="gif">
-              <span>🖼️</span> GIF
-            </button>
-          </div>
-
-          <!-- Barra de Pesquisa -->
-          <div class="search-box">
-            <div class="search-input-wrapper">
-              <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <input 
-                type="text" 
-                id="file-search" 
-                class="search-input" 
-                placeholder="Pesquisar por título ou tags..."
-              />
-              <button type="button" id="clear-search" class="clear-search-btn" style="display: none;">×</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- LISTA -->
-        <div id="resources-wrapper">
-          <div id="files-empty" class="resource-list-empty">
-            Nenhum recurso cadastrado ainda.
-          </div>
-          <div id="files-list" class="resource-list" style="display:none;"></div>
-        </div>
-      </section>
+      </div>
     </div>
   </main>
+
 </div>
 
-<!-- MODAL DE VISUALIZAÇÃO -->
+<!-- FILE VIEWER MODAL -->
 <div id="file-viewer-modal" class="file-viewer-modal">
   <div class="file-viewer-content">
     <div class="file-viewer-header">
       <div class="file-viewer-title" id="file-viewer-title">Visualizando arquivo</div>
       <button class="file-viewer-close" onclick="closeFileViewer()">×</button>
     </div>
-    <div class="file-viewer-body" id="file-viewer-body">
-      <!-- Conteúdo será inserido aqui -->
-    </div>
+    <div class="file-viewer-body" id="file-viewer-body"></div>
   </div>
 </div>
 
-<!-- MODAL DE DOWNLOAD -->
+<!-- BACKUP DOWNLOAD MODAL -->
 <div id="backup-download-modal" class="backup-download-modal">
   <div class="backup-download-content">
     <div class="backup-download-icon">
@@ -1627,5 +369,6 @@ select:focus {
 </div>
 
 </body>
+<script src="/static/chat-widget.js"></script>
 <script src="/static/admin.js"></script>
 </html>

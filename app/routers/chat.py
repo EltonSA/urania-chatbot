@@ -61,6 +61,9 @@ def chat_status():
                 "last_check": status.get("last_check")
             }
     
+    if settings.WHATSAPP_NUMBER:
+        status["whatsapp_number"] = settings.WHATSAPP_NUMBER
+    
     return status
 
 

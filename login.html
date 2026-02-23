@@ -3,290 +3,95 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login - Painel Administrativo</title>
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+  <title>Login - Urânia +</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',
+              500:'#22c55e',600:'#1C8B3C',700:'#15803d',800:'#166534',900:'#14532d'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','BlinkMacSystemFont','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --primary: #0f172a;
-      --muted: #64748b;
-      --accent: #1C8B3C;
-      --accent-hover: #16a34a;
-      --accent-light: #f0fdf4;
-      --border: #e2e8f0;
-      --error: #dc2626;
-      --radius: 20px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", sans-serif;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    .login-container {
-      width: 100%;
-      max-width: 440px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: 0 24px 64px rgba(15, 23, 42, 0.15), 0 8px 24px rgba(15, 23, 42, 0.1);
-      border: 1px solid var(--border);
-      padding: 48px 40px;
-      animation: fadeInUp 0.5s ease;
-    }
-    
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .logo-section {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-
-    .logo-circle {
-      width: 80px;
-      height: 80px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 20px;
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(28, 139, 60, 0.3);
-      transition: transform 0.3s ease;
-    }
-    
-    .logo-circle:hover {
-      transform: scale(1.05);
-    }
-    
-    .logo-circle img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .logo-title {
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-      color: var(--primary);
-      letter-spacing: -0.02em;
-    }
-
-    .logo-subtitle {
-      font-size: 15px;
-      color: var(--muted);
-      margin: 0;
-      font-weight: 500;
-    }
-
-    .form-group {
-      margin-bottom: 24px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 10px;
-      letter-spacing: -0.01em;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 14px 18px;
-      font-size: 15px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: #ffffff;
-      color: var(--primary);
-      transition: all 0.2s ease;
-      font-family: inherit;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--accent-light), 0 4px 12px rgba(28, 139, 60, 0.15);
-      transform: translateY(-1px);
-    }
-
-    .form-input::placeholder {
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .btn-login {
-      width: 100%;
-      padding: 16px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      margin-top: 8px;
-      box-shadow: 0 4px 12px rgba(28, 139, 60, 0.25);
-      letter-spacing: 0.3px;
-    }
-
-    .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(28, 139, 60, 0.35);
-      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
-    }
-
-    .btn-login:active {
-      transform: translateY(0);
-      box-shadow: 0 4px 12px rgba(28, 139, 60, 0.25);
-    }
-
-    .btn-login:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .error-message {
-      background: #fef2f2;
-      border: 2px solid #fecaca;
-      color: var(--error);
-      padding: 14px 18px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 24px;
-      display: none;
-      animation: shake 0.4s ease;
-    }
-    
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-8px); }
-      75% { transform: translateX(8px); }
-    }
-
-    .error-message.show {
-      display: block;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #ffffff;
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .footer-text {
-      text-align: center;
-      margin-top: 32px;
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-    
-    @media (max-width: 480px) {
-      .login-container {
-        padding: 32px 24px;
-        max-width: 100%;
-      }
-      
-      .logo-circle {
-        width: 64px;
-        height: 64px;
-      }
-      
-      .logo-title {
-        font-size: 24px;
-      }
-    }
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    .animate-fade-in-up{animation:fadeInUp .6s cubic-bezier(.4,0,.2,1) both}
+    .animate-shake{animation:shake .4s ease}
+    .loading{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+    .bg-pattern{background-image:radial-gradient(circle at 1px 1px, rgba(28,139,60,0.07) 1px, transparent 0);background-size:32px 32px}
   </style>
 </head>
-<body>
-  <div class="login-container">
-    <div class="logo-section">
-      <div class="logo-circle">
-        <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar Urânia +" />
+<body class="min-h-screen bg-gradient-to-br from-brand-50 via-slate-50 to-sky-50 font-sans text-gray-900 flex items-center justify-center p-4 sm:p-6 antialiased bg-pattern">
+
+  <!-- Decorative blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-40 -right-40 w-96 h-96 bg-brand-200/30 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-sky-200/30 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative w-full max-w-[420px] animate-fade-in-up">
+    <!-- Card -->
+    <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-gray-900/5 border border-white/60 p-8 sm:p-10">
+
+      <!-- Logo Section -->
+      <div class="text-center mb-10">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-brand-600/25 hover:scale-105 transition-transform duration-300 overflow-hidden ring-4 ring-brand-100">
+          <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar Urânia +" class="w-full h-full object-cover" />
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900">Urânia +</h1>
+        <p class="text-sm text-gray-500 mt-1.5 font-medium">Acesse o Painel Administrativo</p>
       </div>
-      <h1 class="logo-title">Urânia +</h1>
-      <p class="logo-subtitle">Painel Administrativo</p>
+
+      <!-- Error Message -->
+      <div id="error-message" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium mb-6 hidden"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="space-y-5">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2" for="username">Usuário</label>
+          <input
+            type="text" id="username" name="username"
+            class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-50 focus:bg-white hover:border-gray-300"
+            placeholder="Digite seu usuário" required autocomplete="username" autofocus
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2" for="password">Senha</label>
+          <input
+            type="password" id="password" name="password"
+            class="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-50 focus:bg-white hover:border-gray-300"
+            placeholder="Digite sua senha" required autocomplete="current-password"
+          />
+        </div>
+
+        <button type="submit" id="btn-login"
+          class="w-full py-3.5 text-[15px] font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-600/25 active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none shadow-md shadow-brand-600/20 mt-2">
+          Entrar
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <p class="text-center mt-8 text-xs text-gray-400 font-medium tracking-wide">
+        Sistema de Gerenciamento de Chatbot
+      </p>
     </div>
-
-    <div class="error-message" id="error-message"></div>
-
-    <form id="login-form">
-      <div class="form-group">
-        <label class="form-label" for="username">Usuário</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          class="form-input"
-          placeholder="Digite seu usuário"
-          required
-          autocomplete="username"
-          autofocus
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="password">Senha</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          class="form-input"
-          placeholder="Digite sua senha"
-          required
-          autocomplete="current-password"
-        />
-      </div>
-
-      <button type="submit" class="btn-login" id="btn-login">
-        Entrar
-      </button>
-    </form>
-
-    <p class="footer-text">
-      Sistema de Gerenciamento de Chatbot
-    </p>
   </div>
 
   <script>
@@ -298,9 +103,11 @@
 
     function showError(message) {
       errorMessage.textContent = message;
-      errorMessage.classList.add("show");
+      errorMessage.classList.remove("hidden");
+      errorMessage.classList.add("animate-shake");
       setTimeout(() => {
-        errorMessage.classList.remove("show");
+        errorMessage.classList.add("hidden");
+        errorMessage.classList.remove("animate-shake");
       }, 5000);
     }
 
@@ -316,7 +123,6 @@
 
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      
       const username = usernameInput.value.trim();
       const password = passwordInput.value;
 
@@ -326,7 +132,7 @@
       }
 
       setLoading(true);
-      errorMessage.classList.remove("show");
+      errorMessage.classList.add("hidden");
 
       try {
         const res = await fetch("/auth/login", {
@@ -344,9 +150,6 @@
 
         const data = await res.json();
         localStorage.setItem("admin_token", data.access_token);
-        
-        // Cookie já foi definido pelo servidor, apenas redireciona
-        // Redireciona para o painel admin
         window.location.href = "/admin";
       } catch (err) {
         console.error("Erro no login:", err);
@@ -355,7 +158,6 @@
       }
     });
 
-    // Enter no campo de senha também submete o formulário
     passwordInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         loginForm.dispatchEvent(new Event("submit"));
@@ -364,4 +166,3 @@
   </script>
 </body>
 </html>
-

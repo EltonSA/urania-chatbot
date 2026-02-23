@@ -137,7 +137,7 @@ const originalText = btnSavePrompt.textContent;
 const originalHTML = btnSavePrompt.innerHTML;
 
 btnSavePrompt.disabled = true;
-btnSavePrompt.textContent = "⏳ Salvando...";
+btnSavePrompt.textContent = "Salvando...";
 promptStatus.textContent = "Salvando...";
 promptStatus.classList.remove("error", "success");
 promptStatus.classList.add("show");
@@ -166,13 +166,13 @@ try {
     const data = await res.json();
     
     // Feedback visual de sucesso
-    promptStatus.textContent = "✅ Prompt salvo com sucesso!";
+    promptStatus.textContent = "Prompt salvo com sucesso!";
     promptStatus.classList.remove("error");
     promptStatus.classList.add("success", "show");
     
     // Animação no botão
     btnSavePrompt.style.background = "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
-    btnSavePrompt.textContent = "✅ Salvo!";
+    btnSavePrompt.textContent = "Salvo!";
     btnSavePrompt.disabled = false;
     
     // Restaura após 3 segundos
@@ -296,7 +296,7 @@ function renderFiles(files, searchTerm = "") {
 
     const icon = document.createElement("div");
     icon.className = "resource-icon " + (f.file_type === "pdf" ? "pdf" : "gif");
-    icon.textContent = f.file_type === "pdf" ? "📄" : "🖼️";
+    icon.innerHTML = f.file_type === "pdf" ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
     header.appendChild(icon);
 
     const info = document.createElement("div");
@@ -336,21 +336,21 @@ function renderFiles(files, searchTerm = "") {
     const btnView = document.createElement("button");
     btnView.type = "button";
     btnView.className = "btn-small btn-view";
-    btnView.textContent = "👁️ Visualizar";
+    btnView.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Visualizar';
     btnView.addEventListener("click", () => viewFile(f));
     actions.appendChild(btnView);
 
     const btnEdit = document.createElement("button");
     btnEdit.type = "button";
     btnEdit.className = "btn-small btn-edit";
-    btnEdit.textContent = "✏️ Editar";
+    btnEdit.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar';
     btnEdit.addEventListener("click", () => editFile(f));
     actions.appendChild(btnEdit);
 
     const btnDelete = document.createElement("button");
     btnDelete.type = "button";
     btnDelete.className = "btn-small btn-delete";
-    btnDelete.textContent = "🗑️ Excluir";
+    btnDelete.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir';
     btnDelete.addEventListener("click", () => deleteFile(f.id));
     actions.appendChild(btnDelete);
 
@@ -509,13 +509,13 @@ function editFile(file) {
     const btnSave = document.createElement('button');
     btnSave.type = 'button';
     btnSave.className = 'btn-small btn-save-edit';
-    btnSave.innerHTML = '💾 Salvar';
+    btnSave.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar';
     btnSave.addEventListener('click', () => saveEdit(file.id, titleInput.value, tagsInput.value, originalTitle, originalTags));
     
     const btnCancel = document.createElement('button');
     btnCancel.type = 'button';
     btnCancel.className = 'btn-small btn-cancel-edit';
-    btnCancel.innerHTML = '❌ Cancelar';
+    btnCancel.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar';
     btnCancel.addEventListener('click', () => cancelEdit(file.id));
     
     editActions.appendChild(btnSave);
@@ -604,7 +604,7 @@ async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) 
     const btnSave = item.querySelector('.btn-save-edit');
     if (btnSave) {
         btnSave.disabled = true;
-        btnSave.innerHTML = '⏳ Salvando...';
+        btnSave.innerHTML = 'Salvando...';
     }
     
     try {
@@ -643,7 +643,7 @@ async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) 
         
         // Feedback visual de sucesso
         if (btnSave) {
-            btnSave.innerHTML = '✅ Salvo!';
+            btnSave.innerHTML = 'Salvo!';
             setTimeout(() => {
                 cancelEdit(fileId);
             }, 500);
@@ -653,7 +653,7 @@ async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) 
         // Erro ao editar recurso
         if (btnSave) {
             btnSave.disabled = false;
-            btnSave.innerHTML = '💾 Salvar';
+            btnSave.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar';
         }
         alert("Erro ao atualizar recurso: " + (err.message || "Erro desconhecido"));
     }
@@ -1025,7 +1025,7 @@ async function createBackup() {
         a.click();
         
         // Mostra sucesso no modal
-        showBackupModal("✅ Download Concluído!", `Arquivo: ${filename}`, `Tamanho: ${sizeMB} MB - Download iniciado!`, 100);
+        showBackupModal("Download Concluído!", `Arquivo: ${filename}`, `Tamanho: ${sizeMB} MB - Download iniciado!`, 100);
         
         // Aguarda um pouco antes de limpar (para garantir que o download iniciou)
         setTimeout(() => {
@@ -1042,7 +1042,7 @@ async function createBackup() {
             // Sucesso - remove animação e mostra mensagem no botão
             btnBackup.classList.remove("loading");
             btnBackup.disabled = false;
-            btnBackup.textContent = "✅ Download concluído!";
+            btnBackup.textContent = "Download concluído!";
             btnBackup.style.background = "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
             btnBackup.style.animation = "none";
             
@@ -1061,7 +1061,7 @@ async function createBackup() {
         console.error("Erro ao criar backup:", err);
         
         // Mostra erro no modal
-        showBackupModal("❌ Erro no Backup", err.message, "Tente novamente mais tarde", 0);
+        showBackupModal("Erro no Backup", err.message, "Tente novamente mais tarde", 0);
         
         setTimeout(() => {
             hideBackupModal();
@@ -1100,7 +1100,7 @@ function setupBackupButton() {
         newBtn.setAttribute("onclick", "return false;");
         // Botão de backup configurado
     } else {
-        console.warn("⚠️ Botão de backup não encontrado no DOM");
+        console.warn("Botão de backup não encontrado no DOM");
     }
 }
 

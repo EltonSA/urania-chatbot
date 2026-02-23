@@ -82,6 +82,9 @@ class Settings(BaseSettings):
         
         return warnings
     
+    # WhatsApp
+    WHATSAPP_NUMBER: str = Field(default="", description="Número do WhatsApp para suporte (formato internacional, apenas números)")
+    
     # OpenAI
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="Chave da API OpenAI")
     OPENAI_MODEL: str = Field(default="gpt-4o-mini", description="Modelo OpenAI a usar")

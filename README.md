@@ -11,6 +11,7 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 - 📊 **Dashboard de Métricas** - Análise de desempenho, feedbacks e perguntas frequentes
 - 🔐 **Painel Administrativo** - Interface completa para gerenciar conteúdo e configurações
 - 📱 **Widget de Chat** - Interface moderna e responsiva para os clientes
+- 💬 **Widget Flutuante** - Botão de chat embeddable para qualquer página (único `<script>`)
 - 📈 **Estatísticas Avançadas** - Métricas de resolução, detração e redirecionamento para suporte
 
 ## 🚀 Características Técnicas
@@ -251,7 +252,8 @@ sudo systemctl status urania
 │   ├── admin.css
 │   ├── admin.js
 │   ├── dashboard.css
-│   └── dashboard.js
+│   ├── dashboard.js
+│   └── chat-widget.js        # Widget flutuante embeddable
 ├── data/                     # Banco de dados SQLite
 │   └── saas_chatbot.db
 ├── uploads/                  # Arquivos enviados
@@ -471,13 +473,105 @@ LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 ## 🎯 Funcionalidades Principais
 
-### Widget de Chat
+### Widget de Chat (Página Completa)
 - Interface moderna e responsiva
 - Suporte a anexos (PDFs e GIFs)
 - Indicador de digitação em tempo real
 - Feedback de resolução (Sim/Não)
 - Redirecionamento para suporte humano via WhatsApp
 - Histórico de conversas
+
+### Widget Flutuante Embeddable (`chat-widget.js`)
+
+Widget JavaScript que embute a rota `/widget` existente dentro de um iframe flutuante. Pode ser adicionado em qualquer página do sistema (ou site externo) com uma única tag `<script>`.
+
+#### Arquitetura
+
+O widget funciona em duas camadas:
+
+1. **`chat-widget.js`** — Cria o botão flutuante, a janela com cabeçalho (minimizar, tela cheia, fechar) e um iframe
+2. **`/widget?embed=1`** — O iframe carrega a rota `/widget` existente em modo embed (layout compacto, sem cabeçalho duplicado, com persistência via sessionStorage)
+
+Isso significa que **toda a lógica do chat** (mensagens, anexos, feedback, status) fica centralizada no `widget.html`. Qualquer atualização no widget se reflete automaticamente no botão flutuante.
+
+#### Como Usar
+
+**Uso básico** — adicione antes do `</body>` em qualquer página:
+```html
+<script src="/static/chat-widget.js"></script>
+```
+
+**Uso em site externo** (domínio diferente):
+```html
+<script>
+  window.UraniaWidgetConfig = {
+    apiUrl: 'https://seu-dominio.com'
+  };
+</script>
+<script src="https://seu-dominio.com/static/chat-widget.js"></script>
+```
+
+> **Nota:** Para uso em domínios externos, adicione o domínio na variável `CORS_ORIGINS` do `.env`.
+
+#### Configuração Avançada
+
+Todas as opções podem ser configuradas via `window.UraniaWidgetConfig` ou via atributos `data-*` no script:
+
+```html
+<script>
+  window.UraniaWidgetConfig = {
+    apiUrl: '',                    // URL base da API (vazio = mesmo domínio)
+    assistantName: 'Urânia +',     // Nome exibido no cabeçalho
+    avatarUrl: 'https://...',      // URL do avatar do assistente
+    primaryColor: '#1C8B3C',       // Cor principal do widget
+    primaryDark: '#15803d',        // Cor escura (gradiente)
+    zIndex: 99999,                 // Z-index do widget
+    buttonSize: 62,                // Tamanho do botão flutuante (px)
+    windowWidth: 400,              // Largura da janela do chat (px)
+    windowHeight: 580              // Altura da janela do chat (px)
+  };
+</script>
+<script src="/static/chat-widget.js"></script>
+```
+
+Ou via atributos `data-*`:
+```html
+<script
+  src="/static/chat-widget.js"
+  data-api-url="https://seu-dominio.com"
+  data-assistant-name="Urânia +"
+  data-primary-color="#1C8B3C">
+</script>
+```
+
+#### Duas formas de acesso ao chat
+
+| Rota | Descrição |
+|---|---|
+| `/widget` | Página completa do chat (acesso direto, layout padrão) |
+| `/widget?embed=1` | Modo embed usado pelo iframe (layout compacto, sem cabeçalho, com persistência) |
+
+#### Funcionalidades do Widget Flutuante
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Botão flutuante** | Canto inferior direito, com animação pulse para chamar atenção |
+| **Abrir/fechar chat** | Clique no botão para abrir, X ou ESC para fechar |
+| **Cabeçalho completo** | Avatar, nome do assistente, status online/offline, minimizar, tela cheia e fechar |
+| **Mensagem de boas-vindas** | Exibida automaticamente ao abrir o chat (iframe pré-carregado) |
+| **Tela cheia** | Botão para expandir o chat para tela inteira; ESC ou botão restaura ao normal |
+| **Persistência na navegação** | Chat mantém mensagens e estado ao navegar entre páginas (sessionStorage) |
+| **Sem histórico ao relogar** | Ao fechar aba ou relogar, chat volta limpo automaticamente |
+| **Minimizar/restaurar** | Usuário pode minimizar e restaurar o chat a qualquer momento |
+| **Indicador de digitação** | Animação de 3 pontos enquanto a IA processa |
+| **Anexos PDF** | Visualizador inline com botões "Ampliar" e "Baixar" |
+| **Anexos GIF/Imagens** | Miniaturas clicáveis que expandem em modal lightbox |
+| **Feedback** | Card "Conseguiu resolver?" com Sim/Não |
+| **Suporte WhatsApp** | Botão para falar com suporte humano (quando a IA redireciona) |
+| **Badge de notificação** | Indicador no botão quando há mensagens não lidas (chat fechado) |
+| **Responsivo** | Janela flutuante no desktop, tela cheia automática no mobile |
+| **Tecla ESC** | Sai da tela cheia → fecha o chat (em cascata) |
+| **CSS isolado** | Estilos não interferem na página hospedeira; scroll da página oculto em tela cheia |
 
 ### Painel Administrativo
 - Gerenciamento de arquivos (upload, edição, exclusão)
