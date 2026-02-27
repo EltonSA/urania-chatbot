@@ -408,7 +408,7 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       body: JSON.stringify({
         root_behavior: state.root_behavior,
         root_custom_url: state.root_custom_url,
-        widget_enabled: state.widget_enabled ? 'true' : 'false'
+        widget_enabled: state.widget_enabled
       })
     })
     .then(function (r) { if (!r.ok) throw r; return r.json(); })

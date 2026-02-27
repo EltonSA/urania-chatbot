@@ -76,8 +76,11 @@ class SystemSettingsBody(BaseModel):
 
     @validator("root_custom_url")
     def validate_safe_url(cls, v):
-        if v is not None and v != "" and (not v.startswith("/") or v.startswith("//")):
-            raise ValueError("URL customizada deve ser relativa (começar com /)")
+        if v is not None and v != "":
+            if v.startswith("//"):
+                raise ValueError("URL inválida")
+            if not v.startswith("/") and not v.startswith("http://") and not v.startswith("https://"):
+                raise ValueError("URL deve ser relativa (/) ou absoluta (https://)")
         return v
 
 
