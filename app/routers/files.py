@@ -2,22 +2,46 @@
 Rotas para gerenciamento de arquivos
 """
 import os
+import logging
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import FileModel
 from app.schemas import FileOut, FileUpdateBody
 from app.auth import get_current_user
-from app.utils import build_file_url, ensure_upload_dirs
+from app.utils import build_file_url, ensure_upload_dirs, log_audit
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+MAGIC_BYTES = {
+    "pdf": [b"%PDF"],
+    "gif": [b"GIF87a", b"GIF89a"],
+}
+
+
+def _validate_file_content(content: bytes, file_type: str):
+    """Verifica se os magic bytes do arquivo correspondem ao tipo declarado"""
+    signatures = MAGIC_BYTES.get(file_type)
+    if not signatures:
+        return
+
+    if not any(content.startswith(sig) for sig in signatures):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"O conteúdo do arquivo não corresponde ao tipo '{file_type}'. "
+                   f"Verifique se o arquivo é realmente um {file_type.upper()} válido."
+        )
+
 
 router = APIRouter(prefix="/admin/files", tags=["Arquivos"])
 
 
 @router.post("/upload", response_model=FileOut, status_code=status.HTTP_201_CREATED)
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     file_type: str = Form(...),
     title: str = Form(""),
@@ -36,14 +60,15 @@ async def upload_file(
             detail=f"file_type deve ser um de: {', '.join(settings.ALLOWED_EXTENSIONS)}"
         )
     
-    # Verifica tamanho do arquivo
     content = await file.read()
     if len(content) > settings.MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Arquivo muito grande. Tamanho máximo: {settings.MAX_FILE_SIZE / 1024 / 1024}MB"
         )
-    
+
+    _validate_file_content(content, file_type)
+
     pdf_dir, gif_dir = ensure_upload_dirs()
     folder = pdf_dir if file_type == "pdf" else gif_dir
 
@@ -54,9 +79,6 @@ async def upload_file(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    import logging
-    logger = logging.getLogger(__name__)
-    
     db_file = FileModel(
         filename=safe_name,
         original_name=file.filename or safe_name,
@@ -69,6 +91,7 @@ async def upload_file(
     db.refresh(db_file)
     
     logger.info(f"Arquivo salvo no banco: ID {db_file.id}, título: {db_file.title}")
+    log_audit(db, "file_uploaded", "arquivo", f"{file_type.upper()}: {db_file.title} (ID {db_file.id})", user=current_user.get("sub"), ip=request.client.host if request.client else None)
 
     return FileOut(
         id=db_file.id,
@@ -85,9 +108,6 @@ def list_files(
     current_user: dict = Depends(get_current_user)
 ):
     """Lista todos os arquivos. Requer autenticação"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
     files = db.query(FileModel).order_by(FileModel.created_at.desc()).all()
     logger.info(f"Listando {len(files)} arquivos do banco de dados")
     
@@ -110,6 +130,7 @@ def list_files(
 def update_file(
     file_id: int,
     body: FileUpdateBody,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -121,13 +142,19 @@ def update_file(
             detail="Arquivo não encontrado"
         )
 
-    if body.title is not None:
+    changes = []
+    if body.title is not None and body.title != file.title:
+        changes.append(f"título: {file.title} → {body.title}")
         file.title = body.title
-    if body.tags is not None:
+    if body.tags is not None and body.tags != file.tags:
+        changes.append(f"tags: {file.tags} → {body.tags}")
         file.tags = body.tags
 
     db.commit()
     db.refresh(file)
+
+    if changes:
+        log_audit(db, "file_updated", "arquivo", f"ID {file_id}: {'; '.join(changes)}", user=current_user.get("sub"), ip=request.client.host if request.client else None)
 
     return {
         "id": file.id,
@@ -141,6 +168,7 @@ def update_file(
 @router.delete("/{file_id}")
 def delete_file(
     file_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -152,6 +180,8 @@ def delete_file(
             detail="Arquivo não encontrado"
         )
 
+    file_info = f"{file.file_type.upper()}: {file.title} (ID {file.id})"
+
     pdf_dir, gif_dir = ensure_upload_dirs()
     folder = pdf_dir if file.file_type == "pdf" else gif_dir
     filepath = os.path.join(folder, file.filename)
@@ -160,12 +190,11 @@ def delete_file(
         if os.path.exists(filepath):
             os.remove(filepath)
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Erro ao remover arquivo físico {filepath}: {e}")
 
     db.delete(file)
     db.commit()
+    log_audit(db, "file_deleted", "arquivo", file_info, user=current_user.get("sub"), ip=request.client.host if request.client else None)
     return {"ok": True}
 
 

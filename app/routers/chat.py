@@ -28,13 +28,16 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/status")
-def chat_status():
+def chat_status(db: Session = Depends(get_db)):
     """
     Endpoint para verificar o status da conexão com OpenAI.
     Usado pelo frontend para verificar se o chat está disponível.
     Retorna mensagens genéricas para o usuário (sem detalhes técnicos).
     """
     status = get_status()
+    
+    widget_enabled = get_setting(db, "widget_enabled")
+    status["widget_enabled"] = widget_enabled != "false"
     
     # Se a mensagem de erro contém informações técnicas sobre API key, substitui por genérica
     error_message = status.get("error_message")
@@ -63,6 +66,10 @@ def chat_status():
     
     if settings.WHATSAPP_NUMBER:
         status["whatsapp_number"] = settings.WHATSAPP_NUMBER
+    
+    allowed = settings.widget_allowed_origins_list
+    if allowed:
+        status["allowed_origins"] = allowed
     
     return status
 
@@ -110,6 +117,8 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
             messages.append({"role": m.role, "content": m.content})
 
     messages.append({"role": "user", "content": req.message})
+
+    log_event(db, session_id, "user_message", content=req.message)
 
     try:
         logger.info(f"Chamando OpenAI com modelo: {settings.OPENAI_MODEL}")
@@ -186,7 +195,9 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     raw_attachments = data.get("attachments", []) or []
     should_ask_resolution = bool(data.get("should_ask_resolution", False))
     needs_human_support = bool(data.get("needs_human_support", False))
-    
+
+    log_event(db, session_id, "bot_message", content=reply_text)
+
     # Se precisa de suporte humano, registra o evento
     if needs_human_support:
         log_event(db, session_id, "support_redirected")

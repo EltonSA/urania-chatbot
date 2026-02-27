@@ -18,40 +18,23 @@ logger = logging.getLogger(__name__)
 
 def validate_openai_connection() -> Tuple[bool, Optional[str]]:
     """
-    Valida a conexão com a API OpenAI.
-    
-    Returns:
-        Tuple[bool, Optional[str]]: (sucesso, mensagem_de_erro)
-        - Se sucesso=True, a conexão está OK
-        - Se sucesso=False, retorna mensagem de erro
+    Valida a conexão com a API OpenAI usando client.models.list()
+    que é gratuito (não consome tokens).
     """
     if not settings.OPENAI_API_KEY:
-        # Retorna mensagem genérica para o usuário (detalhes técnicos ficam nos logs)
         return False, "Serviço de IA temporariamente indisponível"
-    
+
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        
-        # Faz uma chamada simples para validar a API key
-        # Usa um modelo simples e barato para teste
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": "Test"},
-                {"role": "user", "content": "OK"}
-            ],
-            max_tokens=5,
-            timeout=10  # Timeout de 10 segundos
-        )
-        
-        # Se chegou aqui, a conexão está OK
+        client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=10)
+
+        client.models.list()
+
         return True, None
-        
+
     except Exception as e:
         error_msg = str(e).lower()
-        
-        # Mensagens de erro mais específicas
+
         if "api_key" in error_msg or "authentication" in error_msg or "invalid" in error_msg:
             return False, "Token da API OpenAI inválido ou não autorizado"
         elif "rate limit" in error_msg:
@@ -61,7 +44,7 @@ def validate_openai_connection() -> Tuple[bool, Optional[str]]:
         elif "timeout" in error_msg or "connection" in error_msg:
             return False, "Serviço OpenAI temporariamente indisponível"
         else:
-            return False, f"Erro ao conectar com OpenAI: {str(e)}"
+            return False, "Erro ao conectar com OpenAI"
 
 
 def build_file_url(file: FileModel) -> str:
@@ -89,6 +72,14 @@ def set_setting(db: Session, key: str, value: str):
     else:
         setting = SettingModel(key=key, value=value)
         db.add(setting)
+    db.commit()
+
+
+def log_audit(db: Session, action: str, category: str, detail: str = None, user: str = None, ip: str = None):
+    """Registra uma ação no log de auditoria"""
+    from app.models import AuditLogModel
+    entry = AuditLogModel(action=action, category=category, detail=detail, user=user, ip=ip)
+    db.add(entry)
     db.commit()
 
 

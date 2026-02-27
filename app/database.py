@@ -54,7 +54,7 @@ def init_db():
     Inicializa o banco de dados criando todas as tabelas
     Apenas cria tabelas se não existirem (não sobrescreve dados existentes)
     """
-    from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel
+    from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel, AuditLogModel
     # create_all só cria tabelas que não existem, não apaga dados
     Base.metadata.create_all(bind=engine, checkfirst=True)
     logger.info("Banco de dados verificado e tabelas criadas (se necessário)")

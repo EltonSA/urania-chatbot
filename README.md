@@ -16,21 +16,27 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 
 ## 🚀 Características Técnicas
 
-- ✅ **Autenticação JWT** - Sistema seguro de autenticação com tokens
-- ✅ **Rate Limiting** - Proteção contra abuso e sobrecarga
-- ✅ **Logging Profissional** - Sistema completo de logs estruturados
+- ✅ **Autenticação JWT** - Tokens seguros com cookies `httponly` e flag `secure` automática em produção
+- ✅ **Senhas com bcrypt** - Hash bcrypt direto (sem passlib), compatível com Python 3.13+
+- ✅ **Proteção brute force** - Bloqueio automático após 5 tentativas falhas de login por IP (15 min)
+- ✅ **Rate Limiting robusto** - Proteção contra DDoS com limite de 10.000 IPs rastreados e cleanup automático
+- ✅ **Validação de uploads** - Verificação de magic bytes (assinatura real) dos arquivos PDF e GIF
+- ✅ **Proteção contra Open Redirect** - URLs de redirecionamento validadas como relativas
+- ✅ **Logging Profissional** - Sistema completo de logs estruturados com auditoria
 - ✅ **Arquitetura Modular** - Código organizado, escalável e manutenível
-- ✅ **Validação de Dados** - Schemas Pydantic para validação robusta
-- ✅ **Tratamento de Erros** - Tratamento adequado de exceções
+- ✅ **Validação de Dados** - Schemas Pydantic para todos os endpoints (incluindo configurações)
+- ✅ **Tratamento de Erros** - Mensagens genéricas para o usuário, detalhes técnicos apenas nos logs
 - ✅ **CORS Configurável** - Segurança configurável para diferentes ambientes
 - ✅ **Documentação Automática** - Swagger/ReDoc integrado (apenas em desenvolvimento)
 - ✅ **Categorização Inteligente** - IA agrupa perguntas similares automaticamente
 - ✅ **Exportação de Dados** - Exportação de estatísticas para Excel
+- ✅ **Logs de auditoria** - Registro de login, upload, edição, exclusão e alterações de configuração
+- ✅ **Validação OpenAI gratuita** - Verificação da API key no startup sem consumir tokens
 
 ## 📋 Pré-requisitos
 
 ### Desenvolvimento Local
-- Python 3.8+
+- Python 3.10+ (compatível com 3.13)
 - pip
 - 2GB RAM mínimo
 - 1GB espaço em disco
@@ -42,7 +48,7 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 - **RAM**: 1GB (2GB recomendado)
 - **Disco**: 10GB espaço livre
 - **Sistema Operacional**: Linux (Ubuntu 20.04+ / Debian 11+ / CentOS 8+)
-- **Python**: 3.8 ou superior
+- **Python**: 3.10 ou superior (compatível com 3.13)
 - **Conexão**: Internet estável para API OpenAI
 
 #### Requisitos Recomendados
@@ -95,10 +101,6 @@ Edite o arquivo `.env` e configure:
 - `OPENAI_API_KEY`: Sua chave da API OpenAI (obrigatório para chat)
 - `CORS_ORIGINS`: Origens permitidas (ajuste conforme necessário)
 - `DEBUG`: Defina como `False` em produção
-- `ROOT_REDIRECT`: Comportamento da rota raiz `/` (opcional):
-  - **Em produção** (DEBUG=False): padrão é redirecionar para `/widget`
-  - **Em desenvolvimento** (DEBUG=True): padrão é retornar JSON com informações
-  - Valores possíveis: `widget`, `admin`, `dashboard`, `login`, `json` ou vazio (usa padrão)
 
 **Para gerar uma SECRET_KEY segura:**
 ```python
@@ -111,7 +113,7 @@ print(secrets.token_urlsafe(32))
 - Defina `DEBUG=False`
 - Configure `CORS_ORIGINS` apenas com seus domínios permitidos
 - As documentações (`/docs` e `/redoc`) serão desabilitadas automaticamente quando `DEBUG=False`
-- A rota raiz `/` redireciona automaticamente para `/widget` em produção (pode ser configurado via `ROOT_REDIRECT`)
+- A rota raiz `/` é configurável pelo painel de Configurações (padrão: redirecionar para `/widget`)
 
 ## 🏃 Executando
 
@@ -131,6 +133,7 @@ A aplicação estará disponível em:
 - **Widget de Chat**: http://localhost:8000/widget
 - **Painel Admin**: http://localhost:8000/admin
 - **Dashboard**: http://localhost:8000/dashboard
+- **Configurações**: http://localhost:8000/settings
 - **Login**: http://localhost:8000/login
 - **API**: http://localhost:8000
 - **Documentação** (apenas em modo debug): http://localhost:8000/docs
@@ -237,23 +240,28 @@ sudo systemctl status urania
 │   ├── database.py           # Configuração do banco de dados
 │   ├── models.py             # Modelos SQLAlchemy
 │   ├── schemas.py            # Schemas Pydantic (validação)
-│   ├── auth.py               # Autenticação JWT
+│   ├── auth.py               # Autenticação JWT + bcrypt
 │   ├── utils.py              # Funções utilitárias (IA, busca, etc.)
+│   ├── openai_status.py      # Status da conexão OpenAI
 │   ├── routers/              # Rotas da API organizadas
-│   │   ├── auth.py           # Autenticação
-│   │   ├── files.py          # Gerenciamento de arquivos
-│   │   ├── chat.py           # Endpoint do chat
-│   │   ├── admin.py          # Estatísticas e exportação
-│   │   ├── pages.py          # Páginas HTML
-│   │   └── public_files.py   # Servir arquivos públicos
+│   │   ├── auth.py           # Login/logout + proteção brute force
+│   │   ├── files.py          # Upload com validação de magic bytes
+│   │   ├── chat.py           # Chat + registro de mensagens
+│   │   ├── admin.py          # Estatísticas, backup e configurações
+│   │   ├── pages.py          # Páginas HTML + proteção open redirect
+│   │   ├── public_files.py   # Servir arquivos públicos
+│   │   └── conversations.py  # Gerenciamento de conversas
 │   └── middleware/           # Middlewares
-│       └── rate_limit.py     # Rate limiting
+│       └── rate_limit.py     # Rate limiting (anti-DDoS)
 ├── static/                   # Arquivos estáticos (CSS/JS)
 │   ├── admin.css
 │   ├── admin.js
 │   ├── dashboard.css
 │   ├── dashboard.js
 │   └── chat-widget.js        # Widget flutuante embeddable
+├── scripts/                  # Scripts utilitários
+│   ├── backup.py             # Script de backup
+│   └── restore.py            # Script de restauração
 ├── data/                     # Banco de dados SQLite
 │   └── saas_chatbot.db
 ├── uploads/                  # Arquivos enviados
@@ -263,6 +271,7 @@ sudo systemctl status urania
 ├── admin.html                # Painel administrativo
 ├── dashboard.html            # Dashboard de métricas
 ├── login.html                # Página de login
+├── settings.html             # Configurações do sistema
 ├── .env                      # Variáveis de ambiente (criar)
 ├── .env.example              # Exemplo de configuração
 ├── requirements.txt          # Dependências Python
@@ -397,6 +406,16 @@ Tags: horário, elaboração, criação, turno, turma, grade, planejamento
 
 ## 🔐 Autenticação
 
+### Fluxo de Senha (bcrypt)
+
+A senha do admin é protegida com hash bcrypt armazenado no banco de dados:
+
+1. **Primeiro startup**: O sistema gera o hash bcrypt de `ADMIN_PASSWORD` e armazena no banco (`admin_password_hash`)
+2. **Login**: Usa `bcrypt.verify()` para comparar a senha digitada com o hash armazenado
+3. **Troca de senha**: Se `ADMIN_PASSWORD` for alterado no `.env`, o hash é regenerado automaticamente no próximo login
+
+A senha em texto puro **nunca** é comparada diretamente.
+
 ### Login
 
 ```bash
@@ -415,6 +434,14 @@ Resposta:
 }
 ```
 
+### Logout
+
+```bash
+POST /auth/logout
+```
+
+Limpa o cookie `admin_token` e encerra a sessão. Botão "Sair" disponível em todas as páginas do painel.
+
 ### Usando o Token
 
 Para acessar rotas protegidas, inclua o token no header:
@@ -428,6 +455,7 @@ Authorization: Bearer eyJ...
 - `GET /widget` - Widget de chat para clientes
 - `GET /admin` - Painel administrativo (requer autenticação)
 - `GET /dashboard` - Dashboard de métricas (requer autenticação)
+- `GET /settings` - Configurações do sistema (requer autenticação)
 - `GET /login` - Página de login
 
 ### API Pública
@@ -438,8 +466,9 @@ Authorization: Bearer eyJ...
 - `GET /files/gif/{id}` - Visualizar GIF
 
 ### API Administrativa (requerem autenticação JWT)
-- `POST /auth/login` - Autenticação e obtenção de token
-- `POST /admin/files/upload` - Upload de arquivo (PDF/GIF)
+- `POST /auth/login` - Autenticação e obtenção de token (proteção brute force)
+- `POST /auth/logout` - Encerra sessão e limpa cookie
+- `POST /admin/files/upload` - Upload de arquivo com validação de magic bytes
 - `GET /admin/files` - Listar todos os arquivos
 - `GET /admin/files/stats` - Estatísticas de arquivos (tamanho, quantidade)
 - `PUT /admin/files/{id}` - Atualizar arquivo (título, tags)
@@ -448,28 +477,59 @@ Authorization: Bearer eyJ...
 - `PUT /admin/prompt` - Atualizar prompt do sistema
 - `GET /admin/stats` - Estatísticas completas do sistema
 - `GET /admin/export.xlsx` - Exportar estatísticas para Excel
+- `GET /admin/system-settings` - Obter configurações do sistema
+- `PUT /admin/system-settings` - Salvar configurações (validação Pydantic)
+- `GET /admin/audit-logs` - Logs de auditoria paginados
+- `GET /admin/backup` - Download de backup completo
+- `GET /admin/conversations/` - Listar conversas paginadas
+- `GET /admin/conversations/{id}` - Detalhes de uma conversa
+- `GET /admin/conversations/{id}/export/txt` - Exportar conversa em TXT
+- `GET /admin/conversations/{id}/export/pdf` - Exportar conversa em PDF
 
 ## 🛡️ Segurança
 
-- ✅ Autenticação JWT
-- ✅ Rate limiting configurável
-- ✅ CORS configurável
-- ✅ Validação de tamanho de arquivo
-- ✅ Validação de extensões permitidas
-- ✅ Senhas hasheadas (bcrypt)
+- ✅ **Autenticação JWT** com cookies `httponly` + `samesite=lax` + `secure` automático em produção
+- ✅ **Senhas com bcrypt direto** (sem passlib) — compatível com Python 3.13 e bcrypt 5.x
+- ✅ **Proteção brute force** — 5 tentativas falhas por IP bloqueiam login por 15 minutos
+- ✅ **Rate limiting robusto** — limite por IP com proteção contra exaustão de memória (máx. 10k IPs)
+- ✅ **Validação de magic bytes** — uploads verificam assinatura real do arquivo (PDF: `%PDF`, GIF: `GIF89a`)
+- ✅ **Proteção open redirect** — redirecionamentos aceitam apenas URLs relativas
+- ✅ **CORS configurável** — origens restritas em produção, permissivo em desenvolvimento
+- ✅ **Validação Pydantic completa** — todos os endpoints usam schemas tipados
+- ✅ **Mensagens de erro seguras** — detalhes técnicos apenas nos logs, nunca expostos ao usuário
+- ✅ **Logs de auditoria** — login, upload, edição, exclusão e alterações de configuração registrados
+- ✅ **Docs desabilitados em produção** — Swagger/ReDoc só disponíveis com `DEBUG=True`
+- ✅ **Validação de extensões e tamanho** — apenas PDF/GIF, máximo 50MB configurável
 
-## 📝 Logging
+## 📝 Logging e Auditoria
 
-O sistema registra:
-- Inicialização da aplicação
-- Erros e exceções
-- Tentativas de rate limit
-- Operações críticas
+### Logs de Aplicação
+
+O sistema registra nos logs do servidor:
+- Inicialização da aplicação e validação da conexão OpenAI
+- Erros e exceções (detalhes nos logs, mensagens genéricas para o usuário)
+- Tentativas de rate limit e bloqueio por brute force
 
 Configure o nível de log no `.env`:
 ```
 LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 ```
+
+### Logs de Auditoria (banco de dados)
+
+Todas as ações administrativas são registradas automaticamente no banco e consultáveis via painel (`/settings`) ou API (`/admin/audit-logs`):
+
+| Ação | Categoria | Detalhe registrado |
+|---|---|---|
+| `login_success` | auth | Usuário e IP |
+| `login_failed` | auth | Usuário tentado e IP |
+| `logout` | auth | IP |
+| `prompt_updated` | config | Quantidade de caracteres |
+| `settings_updated` | config | Valores antigos → novos |
+| `file_uploaded` | arquivo | Tipo, título e ID |
+| `file_updated` | arquivo | Campos alterados (antigo → novo) |
+| `file_deleted` | arquivo | Tipo, título e ID |
+| `backup_created` | sistema | Nome do arquivo gerado |
 
 ## 🎯 Funcionalidades Principais
 
@@ -573,16 +633,28 @@ Ou via atributos `data-*`:
 | **Tecla ESC** | Sai da tela cheia → fecha o chat (em cascata) |
 | **CSS isolado** | Estilos não interferem na página hospedeira; scroll da página oculto em tela cheia |
 
+### Painel de Configurações (`/settings`)
+
+Página centralizada para gerenciar o comportamento do sistema:
+
+| Configuração | Descrição |
+|---|---|
+| **Comportamento da URL raiz** | Define o que acontece ao acessar `/`: redirecionar para o chat, exibir página em branco, ou redirecionar para URL customizada |
+| **Widget do Chat** | Toggle para ativar/desativar o widget flutuante em todos os sites de uma vez (útil para manutenção) |
+| **Backup do Sistema** | Gera e baixa backup completo (banco, arquivos, configurações) |
+| **Logs de Auditoria** | Histórico de todas as ações do sistema com filtros por categoria e paginação |
+
 ### Painel Administrativo
-- Gerenciamento de arquivos (upload, edição, exclusão)
+- Gerenciamento de arquivos (upload com validação de magic bytes, edição, exclusão)
 - Configuração do prompt do sistema
 - Busca e filtragem de arquivos
 - Estatísticas de uploads (tipo, tamanho total)
 - Interface drag-and-drop para uploads
 - Visualização de arquivos diretamente no painel
+- Gerenciamento de conversas (histórico, exportação TXT/PDF)
 
 ### Dashboard de Métricas
-- Total de mensagens e chats iniciados
+- Total de mensagens e chats iniciados (com registro correto de `user_message` e `bot_message`)
 - Taxa de resolução (Sim/Não)
 - Contagem de PDFs e GIFs enviados
 - Detratores (usuários sem feedback)
@@ -593,7 +665,9 @@ Ou via atributos `data-*`:
 
 ## 🔄 Migração do Código Antigo
 
-O código antigo em `main.py` foi refatorado para uma estrutura modular. Para usar a nova versão:
+O código antigo (`main_LEGACY_DO_NOT_USE.py`) foi completamente substituído pela estrutura modular em `app/`. Ele está no `.gitignore` e **não deve ser executado** (não possui autenticação nem proteções de segurança).
+
+Para usar a nova versão:
 
 1. Mantenha os arquivos HTML e estáticos na raiz
 2. Use `uvicorn app.main:app` em vez de `uvicorn main:app`
@@ -633,7 +707,9 @@ Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST
    - [ ] `ADMIN_PASSWORD` alterada (não usar valor padrão)
    - [ ] `DEBUG=False` configurado
    - [ ] `CORS_ORIGINS` configurado apenas com domínios permitidos
+   - [ ] `WIDGET_ALLOWED_ORIGINS` configurado com domínios que podem incorporar o widget
    - [ ] Firewall configurado (porta 8000 ou 80/443)
+   - [ ] HTTPS configurado (cookie `secure` é ativado automaticamente com `DEBUG=False`)
 
 3. **Banco de Dados**
    - [ ] Diretório `data/` criado e com permissões corretas
@@ -698,6 +774,12 @@ Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST
 ### Erro de autenticação
 - Verifique se o usuário e senha estão corretos no `.env`
 - Verifique se o token está sendo enviado corretamente no header
+- Se alterou a senha no `.env`, reinicie o servidor — o hash bcrypt será regenerado automaticamente
+
+### Erro com bcrypt / passlib
+- O sistema usa `bcrypt` diretamente (sem `passlib`), garantindo compatibilidade com Python 3.13+ e bcrypt 5.x
+- Se vir erros como `module 'bcrypt' has no attribute '__about__'`, certifique-se de que `passlib` **não** está instalado: `pip uninstall passlib`
+- Instale apenas: `pip install bcrypt>=4.1.0`
 
 ### Problemas de Performance
 - Aumente o número de workers: `--workers 4` ou mais
@@ -729,7 +811,7 @@ Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST
 - **Pydantic** - Validação de dados
 - **OpenAI API** - Integração com GPT para respostas inteligentes
 - **JWT (python-jose)** - Autenticação segura
-- **bcrypt (passlib)** - Hash de senhas
+- **bcrypt** - Hash de senhas (direto, sem passlib)
 - **Uvicorn** - Servidor ASGI de alta performance
 - **OpenPyXL** - Exportação de dados para Excel
 
@@ -763,5 +845,5 @@ Para dúvidas ou suporte técnico, entre em contato com a equipe de desenvolvime
 
 ---
 
-**Urânia +** - Sistema de Chatbot Inteligente v1.0.0
+**Urânia +** - Sistema de Chatbot Inteligente v1.1.0
 

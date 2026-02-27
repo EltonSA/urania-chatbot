@@ -40,8 +40,21 @@ class Settings(BaseSettings):
     
     @property
     def cors_origins_list(self) -> List[str]:
-        """Retorna lista de origens CORS"""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        """Retorna lista de origens CORS (inclui automaticamente WIDGET_ALLOWED_ORIGINS)"""
+        origins = set(origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip())
+        origins.update(self.widget_allowed_origins_list)
+        return list(origins)
+    
+    # Widget
+    WIDGET_ALLOWED_ORIGINS: str = Field(
+        default="",
+        description="Origens permitidas para incorporar o widget via iframe (separadas por vírgula)"
+    )
+    
+    @property
+    def widget_allowed_origins_list(self) -> List[str]:
+        """Retorna lista de origens permitidas para o widget"""
+        return [origin.strip() for origin in self.WIDGET_ALLOWED_ORIGINS.split(",") if origin.strip()]
     
     # Banco de dados
     DATABASE_URL: str = Field(

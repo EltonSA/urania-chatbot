@@ -68,6 +68,19 @@ class FeedbackBody(BaseModel):
     resolved: bool
 
 
+class SystemSettingsBody(BaseModel):
+    """Schema para configurações do sistema"""
+    root_behavior: Optional[str] = Field(None, pattern=r"^(widget|blank|custom)$")
+    root_custom_url: Optional[str] = Field(None, max_length=500)
+    widget_enabled: Optional[bool] = None
+
+    @validator("root_custom_url")
+    def validate_safe_url(cls, v):
+        if v is not None and v != "" and (not v.startswith("/") or v.startswith("//")):
+            raise ValueError("URL customizada deve ser relativa (começar com /)")
+        return v
+
+
 class LoginRequest(BaseModel):
     """Schema para login"""
     username: str

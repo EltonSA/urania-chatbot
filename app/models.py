@@ -49,3 +49,16 @@ class ChatEventModel(Base):
     content = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class AuditLogModel(Base):
+    """Modelo para logs de auditoria do sistema"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String, index=True, nullable=False)
+    category = Column(String, index=True, nullable=False)
+    user = Column(String, nullable=True)
+    detail = Column(Text, nullable=True)
+    ip = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+

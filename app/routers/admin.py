@@ -4,17 +4,17 @@ Rotas administrativas
 from io import BytesIO
 from typing import List
 from collections import Counter
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import distinct, func, case, String, not_
+from sqlalchemy import distinct, func, case, String, not_, desc
 from openpyxl import Workbook
 
 from app.database import get_db
-from app.schemas import PromptBody
+from app.schemas import PromptBody, SystemSettingsBody
 from app.auth import get_current_user
-from app.utils import get_setting, set_setting, ensure_upload_dirs
-from app.models import ChatEventModel, ChatSessionModel, FileModel, FileModel
+from app.utils import get_setting, set_setting, ensure_upload_dirs, log_audit
+from app.models import ChatEventModel, ChatSessionModel, FileModel, FileModel, AuditLogModel
 from app.config import settings
 import os
 import sys
@@ -45,6 +45,7 @@ def get_prompt(
 @router.put("/prompt")
 def save_prompt(
     body: PromptBody,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -55,9 +56,10 @@ def save_prompt(
     logger.info(f"Salvando prompt: {len(body.prompt)} caracteres")
     set_setting(db, "system_prompt", body.prompt or "")
     
-    # Verifica se foi salvo
     saved_prompt = get_setting(db, "system_prompt")
     logger.info(f"Prompt salvo confirmado: {len(saved_prompt) if saved_prompt else 0} caracteres")
+    
+    log_audit(db, "prompt_updated", "config", f"Prompt atualizado ({len(body.prompt or '')} caracteres)", user=current_user.get("sub"), ip=request.client.host if request.client else None)
     
     return {"ok": True}
 
@@ -213,6 +215,77 @@ def files_stats(
     }
 
 
+@router.get("/system-settings")
+def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtém configurações do sistema. Requer autenticação"""
+    return {
+        "root_behavior": get_setting(db, "root_behavior") or "widget",
+        "root_custom_url": get_setting(db, "root_custom_url") or "",
+        "widget_enabled": get_setting(db, "widget_enabled") != "false",
+    }
+
+
+@router.put("/system-settings")
+def save_system_settings(
+    body: SystemSettingsBody,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Salva configurações do sistema. Requer autenticação"""
+    changes = []
+    fields = {
+        "root_behavior": body.root_behavior,
+        "root_custom_url": body.root_custom_url,
+        "widget_enabled": str(body.widget_enabled).lower() if body.widget_enabled is not None else None,
+    }
+    for key, value in fields.items():
+        if value is not None:
+            old = get_setting(db, key)
+            set_setting(db, key, value)
+            if old != value:
+                changes.append(f"{key}: {old} → {value}")
+    if changes:
+        log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=request.client.host if request.client else None)
+    return {"ok": True}
+
+
+@router.get("/audit-logs")
+def get_audit_logs(
+    page: int = 1,
+    limit: int = 50,
+    category: str = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtém logs de auditoria com paginação. Requer autenticação"""
+    query = db.query(AuditLogModel).order_by(desc(AuditLogModel.created_at))
+    if category:
+        query = query.filter(AuditLogModel.category == category)
+    total = query.count()
+    logs = query.offset((page - 1) * limit).limit(limit).all()
+    return {
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit,
+        "logs": [
+            {
+                "id": log.id,
+                "action": log.action,
+                "category": log.category,
+                "user": log.user,
+                "detail": log.detail,
+                "ip": log.ip,
+                "created_at": log.created_at.isoformat() if log.created_at else None
+            }
+            for log in logs
+        ]
+    }
+
+
 @router.get("/export.xlsx")
 def export_excel(
     db: Session = Depends(get_db),
@@ -253,6 +326,8 @@ def export_excel(
 
 @router.get("/backup")
 def create_backup(
+    request: Request,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -329,8 +404,8 @@ def create_backup(
         latest_backup = backup_files[0]
         
         logger.info(f"Backup criado com sucesso: {latest_backup.name}")
+        log_audit(db, "backup_created", "sistema", f"Backup: {latest_backup.name}", user=current_user.get("sub"), ip=request.client.host if request.client else None)
         
-        # Retorna o arquivo para download
         return FileResponse(
             path=str(latest_backup),
             filename=latest_backup.name,

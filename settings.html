@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+  <title>Configurações - Urânia +</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',
+              500:'#22c55e',600:'#1C8B3C',700:'#15803d',800:'#166534',900:'#14532d'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','BlinkMacSystemFont','sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes downloadSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    @keyframes progressPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    @keyframes downloadPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.9;transform:scale(1.02)}}
+    @keyframes downloadShimmer{0%{left:-100%}100%{left:100%}}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
+    .settings-card{background:#fff;border-radius:16px;border:1px solid rgba(229,231,235,.8);padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.04);animation:fadeIn .4s ease both}
+    .settings-card:nth-child(2){animation-delay:.05s}
+    .settings-card:nth-child(3){animation-delay:.1s}
+    .card-title{font-size:16px;font-weight:700;color:#111827;display:flex;align-items:center;gap:10px}
+    .card-desc{font-size:13px;color:#6b7280;margin-top:4px;line-height:1.5}
+
+    .toggle-track{position:relative;width:48px;height:26px;background:#d1d5db;border-radius:13px;cursor:pointer;transition:background .25s ease;flex-shrink:0}
+    .toggle-track.on{background:#1C8B3C}
+    .toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .25s ease;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle-track.on .toggle-thumb{transform:translateX(22px)}
+
+    .radio-opt{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all .2s ease;background:#fff}
+    .radio-opt:hover{border-color:#bbf7d0;background:#fafffe}
+    .radio-opt.selected{border-color:#1C8B3C;background:#f0fdf4;box-shadow:0 0 0 3px rgba(28,139,60,.08)}
+    .radio-dot{width:20px;height:20px;border-radius:50%;border:2px solid #d1d5db;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .2s}
+    .radio-dot::after{content:'';width:10px;height:10px;border-radius:50%;background:#1C8B3C;transform:scale(0);transition:transform .2s}
+    .radio-opt.selected .radio-dot{border-color:#1C8B3C}
+    .radio-opt.selected .radio-dot::after{transform:scale(1)}
+
+    .url-input{width:100%;padding:10px 14px;border-radius:10px;border:2px solid #e5e7eb;font-size:14px;font-family:inherit;background:#fff;color:#111827;transition:all .2s;outline:none;margin-top:10px}
+    .url-input:focus{border-color:#1C8B3C;box-shadow:0 0 0 3px rgba(28,139,60,.1)}
+    .url-input:disabled{opacity:.4;cursor:not-allowed;background:#f9fafb}
+
+    .btn-save{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:12px;border:none;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;color:#fff;background:linear-gradient(135deg,#1C8B3C,#15803d);box-shadow:0 2px 8px rgba(28,139,60,.2)}
+    .btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(28,139,60,.3)}
+    .btn-save:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+    .toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;border-radius:12px;font-size:13px;font-weight:500;color:#fff;z-index:10000;transform:translateY(20px);opacity:0;transition:all .3s ease;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.success{background:#1C8B3C}
+    .toast.error{background:#ef4444}
+
+    .backup-btn{position:relative;overflow:hidden}
+    .backup-btn.loading{opacity:1!important;cursor:wait!important;pointer-events:none!important;animation:downloadPulse 1.5s ease-in-out infinite!important}
+    .backup-btn.loading::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:downloadShimmer 2s ease-in-out infinite;z-index:1}
+    .backup-btn.loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:downloadSpin 1s linear infinite;margin-left:8px;position:relative;z-index:2}
+
+    .backup-download-modal{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:10000}
+    .backup-download-modal.active{display:flex}
+    .backup-download-content{background:#fff;border-radius:24px;padding:40px;max-width:400px;width:90%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,.2);animation:slideUp .4s ease}
+    .backup-download-spinner{width:80px;height:80px;border:5px solid #f3f4f6;border-top-color:#1C8B3C;border-right-color:#1C8B3C;border-radius:50%;animation:downloadSpin 1s linear infinite;margin:0 auto 24px}
+    .backup-download-title{font-size:22px;font-weight:700;color:#111827;margin-bottom:10px}
+    .backup-download-message{font-size:15px;color:#6b7280;margin-bottom:8px;line-height:1.6}
+    .backup-download-progress{margin-top:20px;height:6px;background:#f3f4f6;border-radius:10px;overflow:hidden}
+    .backup-download-progress-bar{height:100%;background:linear-gradient(90deg,#1C8B3C,#16a34a);border-radius:10px;width:0%;animation:progressPulse 1.5s ease-in-out infinite;transition:width .3s ease}
+    .backup-download-status{font-size:13px;color:#9ca3af;margin-top:14px;font-weight:500}
+
+    .log-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+    .log-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:2px solid #e5e7eb;background:#f9fafb;position:sticky;top:0;z-index:1}
+    .log-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:top}
+    .log-table tr:hover td{background:#fafffe}
+    .log-table .log-time{color:#9ca3af;font-size:12px;white-space:nowrap}
+    .log-table .log-action{font-weight:600;color:#111827}
+    .log-table .log-detail{color:#6b7280;max-width:320px;word-break:break-word}
+    .log-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+    .log-badge.auth{background:#eff6ff;color:#2563eb}
+    .log-badge.config{background:#fef3c7;color:#d97706}
+    .log-badge.arquivo{background:#fce7f3;color:#db2777}
+    .log-badge.sistema{background:#f0fdf4;color:#1C8B3C}
+    .log-scroll{max-height:480px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:12px}
+    .log-pagination{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:12px;color:#6b7280}
+    .log-pagination button{padding:6px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
+    .log-pagination button:hover:not(:disabled){background:#f0fdf4;border-color:#1C8B3C;color:#1C8B3C}
+    .log-pagination button:disabled{opacity:.4;cursor:not-allowed}
+    .log-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .log-filter-btn{padding:5px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
+    .log-filter-btn:hover{border-color:#bbf7d0;background:#fafffe}
+    .log-filter-btn.active{background:#1C8B3C;color:#fff;border-color:#1C8B3C}
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50/50 font-sans text-gray-900 antialiased">
+
+<!-- ====== SIDEBAR ====== -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-200/80 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+  <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100 flex-shrink-0">
+    <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-2 ring-brand-100">
+      <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Urânia +" class="w-full h-full object-cover" />
+    </div>
+    <div class="min-w-0">
+      <div class="text-sm font-bold text-gray-900 tracking-tight">Urânia +</div>
+      <div class="text-[10px] text-gray-400 font-medium">Sistema de Chatbot</div>
+    </div>
+  </div>
+
+  <nav class="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
+    <div>
+      <div class="px-3 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-bold">Principal</div>
+      <div class="space-y-1">
+        <a href="/admin" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Recursos
+        </a>
+        <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+          Dashboard
+        </a>
+      </div>
+    </div>
+    <div>
+      <div class="px-3 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-bold">Externo</div>
+      <div class="space-y-1">
+        <a href="/widget" target="_blank" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat Widget
+          <svg class="w-3 h-3 ml-auto text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </div>
+    <div>
+      <div class="px-3 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-bold">Sistema</div>
+      <div class="space-y-1">
+        <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-brand-700 bg-brand-50 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.26.6.85 1 1.51 1.08H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="px-3 py-4 border-t border-gray-100">
+    <button type="button" id="btn-logout" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 w-full cursor-pointer bg-transparent border-0 font-[inherit]">
+      <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
+  </div>
+</aside>
+
+<!-- ====== SIDEBAR OVERLAY (mobile) ====== -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+<!-- ====== MAIN WRAPPER ====== -->
+<div class="lg:pl-[260px] min-h-screen flex flex-col transition-all duration-300">
+
+  <!-- TOPBAR -->
+  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-gray-200/80">
+    <div class="px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+      <button type="button" id="sidebar-toggle" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-600 cursor-pointer bg-transparent border-0">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-base sm:text-lg font-bold tracking-tight text-gray-900 leading-tight">Configurações</h1>
+        <p class="text-[11px] text-gray-400 font-medium hidden sm:block">Personalize o comportamento do sistema</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="btn-save" class="btn-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Salvar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+    <div class="max-w-[800px] mx-auto flex flex-col gap-5">
+
+      <!-- Card: Comportamento da URL raiz -->
+      <div class="settings-card">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Comportamento da URL raiz
+        </div>
+        <p class="card-desc">Define o que acontece quando alguém acessa a URL principal do chatbot (ex: iabeta.urania.com.br).</p>
+
+        <div class="flex flex-col gap-3 mt-5" id="root-options">
+          <label class="radio-opt" data-value="widget">
+            <span class="radio-dot"></span>
+            <div>
+              <div class="text-sm font-semibold text-gray-900">Redirecionar para o chat</div>
+              <div class="text-xs text-gray-500 mt-0.5">Visitantes são levados diretamente à página do widget (/widget)</div>
+            </div>
+          </label>
+          <label class="radio-opt" data-value="blank">
+            <span class="radio-dot"></span>
+            <div>
+              <div class="text-sm font-semibold text-gray-900">Exibir página em branco</div>
+              <div class="text-xs text-gray-500 mt-0.5">A URL raiz não exibe conteúdo (ideal para serviços apenas via widget)</div>
+            </div>
+          </label>
+          <label class="radio-opt" data-value="custom">
+            <span class="radio-dot"></span>
+            <div>
+              <div class="text-sm font-semibold text-gray-900">Redirecionar para URL customizada</div>
+              <div class="text-xs text-gray-500 mt-0.5">Redireciona para um endereço específico</div>
+              <input type="url" id="root-custom-url" class="url-input" placeholder="https://exemplo.com.br" disabled />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Card: Widget -->
+      <div class="settings-card">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Widget do Chat
+            </div>
+            <p class="card-desc">Controla se o balão flutuante do chat aparece nos sites configurados. Desative para manutenção ou emergências.</p>
+          </div>
+          <div class="toggle-track on" id="widget-toggle" role="switch" tabindex="0" aria-label="Ativar/desativar widget">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+        <div id="widget-status" class="mt-4 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Widget ativo em todos os sites
+        </div>
+      </div>
+
+      <!-- Card: Backup -->
+      <div class="settings-card">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Backup do Sistema
+        </div>
+        <p class="card-desc">Gera um arquivo compactado com o banco de dados, arquivos enviados e configurações do sistema.</p>
+        <div class="mt-5">
+          <button type="button" id="btn-backup" class="backup-btn btn-save">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Backup
+          </button>
+        </div>
+      </div>
+
+      <!-- Card: Logs de Auditoria -->
+      <div class="settings-card" style="animation-delay:.15s">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          Logs de Auditoria
+        </div>
+        <p class="card-desc">Histórico de todas as ações realizadas no sistema.</p>
+
+        <div class="mt-5">
+          <div class="log-filters" id="log-filters">
+            <button type="button" class="log-filter-btn active" data-cat="">Todos</button>
+            <button type="button" class="log-filter-btn" data-cat="auth">Autenticação</button>
+            <button type="button" class="log-filter-btn" data-cat="config">Configurações</button>
+            <button type="button" class="log-filter-btn" data-cat="arquivo">Arquivos</button>
+            <button type="button" class="log-filter-btn" data-cat="sistema">Sistema</button>
+          </div>
+          <div class="log-scroll">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Categoria</th>
+                  <th>Ação</th>
+                  <th>Detalhe</th>
+                  <th>Usuário</th>
+                  <th>IP</th>
+                </tr>
+              </thead>
+              <tbody id="log-body">
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:#9ca3af">Carregando logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="log-pagination">
+            <span id="log-info">-</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="log-prev" disabled>Anterior</button>
+              <button type="button" id="log-next" disabled>Próximo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="save-status" class="text-sm text-gray-400 text-center"></div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- Backup download modal -->
+<div class="backup-download-modal" id="backup-modal">
+  <div class="backup-download-content">
+    <div class="backup-download-spinner"></div>
+    <div class="backup-download-title">Gerando backup...</div>
+    <div class="backup-download-message">Isso pode levar alguns segundos</div>
+    <div class="backup-download-progress"><div class="backup-download-progress-bar" id="backup-progress"></div></div>
+    <div class="backup-download-status" id="backup-status">Preparando arquivos...</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('-translate-x-full');
+  document.getElementById('sidebar-overlay').classList.toggle('hidden');
+}
+document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+
+(function () {
+  'use strict';
+
+  var token = localStorage.getItem('admin_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  var state = { root_behavior: 'widget', root_custom_url: '', widget_enabled: true };
+
+  loadSettings();
+
+  function authHeaders() {
+    return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+  }
+
+  function loadSettings() {
+    fetch('/admin/system-settings', { headers: authHeaders() })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
+      .then(function (d) {
+        state.root_behavior = d.root_behavior || 'widget';
+        state.root_custom_url = d.root_custom_url || '';
+        state.widget_enabled = d.widget_enabled !== false;
+        render();
+      })
+      .catch(function () { showToast('Erro ao carregar configurações', 'error'); });
+  }
+
+  function render() {
+    var opts = document.querySelectorAll('#root-options .radio-opt');
+    opts.forEach(function (el) {
+      var v = el.getAttribute('data-value');
+      el.classList.toggle('selected', v === state.root_behavior);
+    });
+
+    var urlInput = document.getElementById('root-custom-url');
+    urlInput.value = state.root_custom_url;
+    urlInput.disabled = state.root_behavior !== 'custom';
+
+    var toggle = document.getElementById('widget-toggle');
+    toggle.classList.toggle('on', state.widget_enabled);
+
+    var statusEl = document.getElementById('widget-status');
+    if (state.widget_enabled) {
+      statusEl.className = 'mt-4 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2';
+      statusEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Widget ativo em todos os sites';
+    } else {
+      statusEl.className = 'mt-4 text-xs font-medium text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-200 inline-flex items-center gap-2';
+      statusEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Widget desativado';
+    }
+  }
+
+  document.querySelectorAll('#root-options .radio-opt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      state.root_behavior = el.getAttribute('data-value');
+      render();
+    });
+  });
+
+  document.getElementById('root-custom-url').addEventListener('input', function () {
+    state.root_custom_url = this.value;
+  });
+
+  document.getElementById('widget-toggle').addEventListener('click', function () {
+    state.widget_enabled = !state.widget_enabled;
+    render();
+  });
+
+  document.getElementById('btn-save').addEventListener('click', function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Salvando...';
+
+    fetch('/admin/system-settings', {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        root_behavior: state.root_behavior,
+        root_custom_url: state.root_custom_url,
+        widget_enabled: state.widget_enabled ? 'true' : 'false'
+      })
+    })
+    .then(function (r) { if (!r.ok) throw r; return r.json(); })
+    .then(function () {
+      showToast('Configurações salvas com sucesso', 'success');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Salvar';
+    })
+    .catch(function () {
+      showToast('Erro ao salvar configurações', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Salvar';
+    });
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', function () {
+    fetch('/auth/logout', { method: 'POST', headers: authHeaders() })
+      .finally(function () {
+        document.cookie = 'admin_token=; Max-Age=0; path=/';
+        localStorage.removeItem('admin_token');
+        window.location.href = '/login';
+      });
+  });
+
+  document.getElementById('btn-backup').addEventListener('click', function () {
+    var btn = this;
+    btn.classList.add('loading');
+
+    var modal = document.getElementById('backup-modal');
+    var bar = document.getElementById('backup-progress');
+    var statusText = document.getElementById('backup-status');
+    modal.classList.add('active');
+    bar.style.width = '30%';
+    statusText.textContent = 'Preparando arquivos...';
+
+    var progressTimer = setInterval(function () {
+      var w = parseInt(bar.style.width) || 30;
+      if (w < 90) bar.style.width = (w + 5) + '%';
+    }, 800);
+
+    fetch('/admin/backup', { headers: authHeaders() })
+      .then(function (r) {
+        if (!r.ok) throw new Error('Erro ' + r.status);
+        var cd = r.headers.get('Content-Disposition') || '';
+        var match = cd.match(/filename[^;=\n]*=(["']?)([^"';\n]*)\1/);
+        var filename = match ? match[2] : 'backup.tar.gz';
+        statusText.textContent = 'Baixando...';
+        bar.style.width = '80%';
+        return r.blob().then(function (blob) { return { blob: blob, filename: filename }; });
+      })
+      .then(function (res) {
+        clearInterval(progressTimer);
+        bar.style.width = '100%';
+        statusText.textContent = 'Concluido!';
+
+        var url = URL.createObjectURL(res.blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = res.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        setTimeout(function () {
+          modal.classList.remove('active');
+          btn.classList.remove('loading');
+          bar.style.width = '0%';
+          showToast('Backup gerado com sucesso', 'success');
+        }, 1200);
+      })
+      .catch(function (e) {
+        clearInterval(progressTimer);
+        modal.classList.remove('active');
+        btn.classList.remove('loading');
+        bar.style.width = '0%';
+        showToast('Erro ao gerar backup: ' + e.message, 'error');
+      });
+  });
+
+  function showToast(msg, type) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (type || 'success');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { toast.classList.remove('show'); }, 3500);
+  }
+
+  /* ── Logs de Auditoria ── */
+  var logPage = 1;
+  var logCategory = '';
+  var actionLabels = {
+    login_success: 'Login realizado',
+    login_failed: 'Login falhou',
+    logout: 'Logout',
+    prompt_updated: 'Prompt atualizado',
+    settings_updated: 'Configurações alteradas',
+    backup_created: 'Backup gerado',
+    file_uploaded: 'Arquivo enviado',
+    file_updated: 'Arquivo editado',
+    file_deleted: 'Arquivo excluído'
+  };
+
+  function loadLogs() {
+    var url = '/admin/audit-logs?page=' + logPage + '&limit=30';
+    if (logCategory) url += '&category=' + logCategory;
+    fetch(url, { headers: authHeaders() })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
+      .then(function (d) { renderLogs(d); })
+      .catch(function () {
+        document.getElementById('log-body').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#ef4444">Erro ao carregar logs</td></tr>';
+      });
+  }
+
+  function renderLogs(data) {
+    var body = document.getElementById('log-body');
+    if (!data.logs || data.logs.length === 0) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#9ca3af">Nenhum registro encontrado</td></tr>';
+      document.getElementById('log-info').textContent = '0 registros';
+      document.getElementById('log-prev').disabled = true;
+      document.getElementById('log-next').disabled = true;
+      return;
+    }
+    var html = '';
+    data.logs.forEach(function (log) {
+      var dt = log.created_at ? new Date(log.created_at) : null;
+      var timeStr = dt ? dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+      var catClass = (log.category || '').toLowerCase();
+      html += '<tr>';
+      html += '<td class="log-time">' + timeStr + '</td>';
+      html += '<td><span class="log-badge ' + catClass + '">' + (log.category || '-') + '</span></td>';
+      html += '<td class="log-action">' + (actionLabels[log.action] || log.action) + '</td>';
+      html += '<td class="log-detail">' + (log.detail || '-') + '</td>';
+      html += '<td>' + (log.user || '-') + '</td>';
+      html += '<td class="log-time">' + (log.ip || '-') + '</td>';
+      html += '</tr>';
+    });
+    body.innerHTML = html;
+
+    var start = (data.page - 1) * 30 + 1;
+    var end = Math.min(data.page * 30, data.total);
+    document.getElementById('log-info').textContent = start + '-' + end + ' de ' + data.total + ' registros';
+    document.getElementById('log-prev').disabled = data.page <= 1;
+    document.getElementById('log-next').disabled = data.page >= data.pages;
+  }
+
+  document.querySelectorAll('#log-filters .log-filter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#log-filters .log-filter-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      logCategory = btn.getAttribute('data-cat') || '';
+      logPage = 1;
+      loadLogs();
+    });
+  });
+
+  document.getElementById('log-prev').addEventListener('click', function () {
+    if (logPage > 1) { logPage--; loadLogs(); }
+  });
+  document.getElementById('log-next').addEventListener('click', function () {
+    logPage++; loadLogs();
+  });
+
+  loadLogs();
+})();
+</script>
+
+</body>
+</html>

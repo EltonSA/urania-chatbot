@@ -5,64 +5,67 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
+MAX_TRACKED_IPS = 10_000
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Middleware para rate limiting"""
-    
+    """Middleware para rate limiting com proteção contra exaustão de memória"""
+
     def __init__(self, app):
         super().__init__(app)
-        self.requests = defaultdict(list)
-        self.cleanup_interval = timedelta(minutes=5)
+        self.requests: dict[str, list[datetime]] = defaultdict(list)
+        self.cleanup_interval = timedelta(minutes=1)
         self.last_cleanup = datetime.utcnow()
-    
+
     async def dispatch(self, request: Request, call_next):
         if not settings.RATE_LIMIT_ENABLED:
             return await call_next(request)
-        
-        # Limpa requisições antigas periodicamente
-        if datetime.utcnow() - self.last_cleanup > self.cleanup_interval:
-            self._cleanup_old_requests()
-            self.last_cleanup = datetime.utcnow()
-        
-        # Obtém IP do cliente
-        client_ip = request.client.host if request.client else "unknown"
-        
-        # Verifica rate limit
+
         now = datetime.utcnow()
+
+        if now - self.last_cleanup > self.cleanup_interval:
+            self._cleanup(now)
+            self.last_cleanup = now
+
+        client_ip = request.client.host if request.client else "unknown"
         minute_ago = now - timedelta(minutes=1)
-        
-        # Remove requisições antigas deste IP
-        self.requests[client_ip] = [
-            req_time for req_time in self.requests[client_ip]
-            if req_time > minute_ago
-        ]
-        
-        # Verifica se excedeu o limite
+
+        timestamps = self.requests[client_ip]
+        self.requests[client_ip] = [t for t in timestamps if t > minute_ago]
+
         if len(self.requests[client_ip]) >= settings.RATE_LIMIT_REQUESTS:
             logger.warning(f"Rate limit excedido para IP: {client_ip}")
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Muitas requisições. Tente novamente em alguns instantes."
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Muitas requisições. Tente novamente em alguns instantes."}
             )
-        
-        # Registra requisição
+
         self.requests[client_ip].append(now)
-        
+
         return await call_next(request)
-    
-    def _cleanup_old_requests(self):
-        """Remove requisições antigas de todos os IPs"""
-        minute_ago = datetime.utcnow() - timedelta(minutes=1)
+
+    def _cleanup(self, now: datetime):
+        """Remove IPs inativos e limita crescimento do dicionário"""
+        minute_ago = now - timedelta(minutes=1)
+
         for ip in list(self.requests.keys()):
-            self.requests[ip] = [
-                req_time for req_time in self.requests[ip]
-                if req_time > minute_ago
-            ]
+            self.requests[ip] = [t for t in self.requests[ip] if t > minute_ago]
             if not self.requests[ip]:
                 del self.requests[ip]
+
+        if len(self.requests) > MAX_TRACKED_IPS:
+            sorted_ips = sorted(
+                self.requests.keys(),
+                key=lambda ip: self.requests[ip][-1] if self.requests[ip] else datetime.min
+            )
+            to_remove = len(self.requests) - MAX_TRACKED_IPS
+            for ip in sorted_ips[:to_remove]:
+                del self.requests[ip]
+            logger.warning(f"Rate limiter: removidos {to_remove} IPs antigos (limite: {MAX_TRACKED_IPS})")
 

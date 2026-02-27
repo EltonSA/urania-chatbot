@@ -100,6 +100,28 @@ async def startup_event():
     init_db()
     logger.info("Banco de dados inicializado")
     
+    # Garante hash bcrypt da senha admin no banco
+    from app.database import SessionLocal
+    from app.utils import get_setting, set_setting
+    from app.auth import get_password_hash, verify_password
+    db = SessionLocal()
+    try:
+        existing_hash = get_setting(db, "admin_password_hash")
+        if not existing_hash:
+            hashed = get_password_hash(settings.ADMIN_PASSWORD)
+            set_setting(db, "admin_password_hash", hashed)
+            logger.info("Hash bcrypt da senha admin gerado e armazenado no banco")
+        else:
+            # Se a senha do .env mudou, regera o hash
+            if not verify_password(settings.ADMIN_PASSWORD, existing_hash):
+                new_hash = get_password_hash(settings.ADMIN_PASSWORD)
+                set_setting(db, "admin_password_hash", new_hash)
+                logger.info("Senha admin alterada no .env — hash bcrypt regenerado")
+            else:
+                logger.info("Hash bcrypt da senha admin OK")
+    finally:
+        db.close()
+    
     # Garante diretórios de upload
     from app.utils import ensure_upload_dirs
     ensure_upload_dirs()

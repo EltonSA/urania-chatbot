@@ -3,17 +3,23 @@
  *
  * Embute o /widget existente dentro de um iframe flutuante.
  *
- * Uso:
+ * Uso (mesmo domínio):
  *   <script src="/static/chat-widget.js"></script>
  *
- * Configuração opcional:
+ * Uso (domínio separado - ex: chat em iabeta.urania.com.br):
  *   <script>
  *     window.UraniaWidgetConfig = {
- *       apiUrl: 'https://seu-dominio.com',
- *       assistantName: 'Urânia +',
- *       primaryColor: '#1C8B3C'
+ *       apiUrl: 'https://iabeta.urania.com.br'
  *     };
  *   </script>
+ *   <script src="https://iabeta.urania.com.br/static/chat-widget.js"></script>
+ *
+ * Configurações disponíveis (window.UraniaWidgetConfig):
+ *   apiUrl        - URL base do serviço de chat (obrigatório se cross-domain)
+ *   assistantName - Nome exibido no header (padrão: 'Urânia +')
+ *   avatarUrl     - URL da imagem do avatar
+ *   primaryColor  - Cor principal (padrão: '#1C8B3C')
+ *   primaryDark   - Cor escura do gradiente (padrão: '#15803d')
  */
 (function () {
   'use strict';
@@ -61,6 +67,7 @@
 
   var API = C.apiUrl;
   var WIDGET_URL = API + '/widget?embed=1';
+  var TRUSTED_ORIGIN = API ? new URL(API).origin : window.location.origin;
 
   /* ================================================================
      SESSION STORAGE (estado abrir/minimizar)
@@ -352,6 +359,20 @@
     fetch(API + '/chat/status')
       .then(function (r) { return r.json(); })
       .then(function (d) {
+        if (d.widget_enabled === false) {
+          if ($.root) $.root.style.display = 'none';
+          return;
+        }
+        if (d.allowed_origins && d.allowed_origins.length > 0) {
+          var currentOrigin = window.location.origin;
+          var isAllowed = d.allowed_origins.some(function (o) { return o === currentOrigin; });
+          if (!isAllowed && currentOrigin !== TRUSTED_ORIGIN) {
+            console.warn('[UraniaChat] Origem ' + currentOrigin + ' não autorizada.');
+            if ($.root) $.root.style.display = 'none';
+            return;
+          }
+        }
+        if ($.root) $.root.style.display = '';
         var ok = d.available !== false;
         if ($.dot) $.dot.classList.toggle('off', !ok);
         if ($.stTxt) $.stTxt.textContent = ok ? 'Online' : 'Indisponível';
@@ -395,9 +416,9 @@
       }
     });
 
-    // Mensagens do iframe (badge de notificação, status)
     window.addEventListener('message', function (e) {
       if (!e.data || typeof e.data !== 'object') return;
+      if (e.origin !== TRUSTED_ORIGIN) return;
       if (e.data.type === 'ucw-status') {
         var ok = e.data.available;
         if ($.dot) $.dot.classList.toggle('off', !ok);

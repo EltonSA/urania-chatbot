@@ -1123,8 +1123,10 @@ function setupDragAndDrop() {
 
     if (!dropZone || !fileInput) return;
 
-    // Click to select file
-    dropZone.addEventListener('click', () => {
+    // Click to select file — only when no file is selected yet
+    dropZone.addEventListener('click', (e) => {
+        if (e.target.closest('.file-preview') || e.target.closest('.file-preview-remove')) return;
+        if (filePreview && filePreview.style.display !== 'none') return;
         fileInput.click();
     });
 
@@ -1201,7 +1203,8 @@ function setupDragAndDrop() {
         }
     }
 
-    window.clearFileInput = function() {
+    window.clearFileInput = function(e) {
+        if (e) { e.stopPropagation(); e.preventDefault(); }
         fileInput.value = '';
         filePreview.style.display = 'none';
         dropZoneContent.style.display = 'flex';
@@ -1223,12 +1226,26 @@ if (document.readyState === 'loading') {
         // DOMContentLoaded disparado
         setupDragAndDrop();
         setupBackupButton();
+        setupLogout();
         init();
     });
 } else {
-    // DOM já está pronto
-    // DOM já está pronto, inicializando imediatamente
     setupDragAndDrop();
     setupBackupButton();
+    setupLogout();
     init();
+}
+
+function setupLogout() {
+    var btn = document.getElementById('btn-logout');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var t = getAuthToken();
+        fetch('/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + (t || '') } })
+            .finally(function () {
+                document.cookie = 'admin_token=; Max-Age=0; path=/';
+                localStorage.removeItem('admin_token');
+                window.location.href = '/login';
+            });
+    });
 }

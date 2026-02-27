@@ -297,6 +297,19 @@ if (!authToken) {
     });
   }
   
+  // Logout
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      fetch('/auth/logout', { method: 'POST', headers: getAuthHeaders() })
+        .finally(() => {
+          document.cookie = 'admin_token=; Max-Age=0; path=/';
+          localStorage.removeItem('admin_token');
+          window.location.href = '/login';
+        });
+    });
+  }
+
   // Limpa timeout quando a página é fechada
   window.addEventListener("beforeunload", () => {
     if (loadStatsTimeout) {

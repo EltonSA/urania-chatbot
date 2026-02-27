@@ -27,31 +27,29 @@
     }
   </script>
   <style>
-    /* ===== Animations ===== */
     @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-6px);opacity:1}}
+    @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 
-    /* ===== Chat Messages (dynamic) ===== */
-    .messages{padding:8px 6px;overflow-y:auto;flex:1;min-height:0;scroll-behavior:smooth}
+    .messages{padding:12px 8px;overflow-y:auto;flex:1;min-height:0;scroll-behavior:smooth}
     .messages::-webkit-scrollbar{width:5px}
     .messages::-webkit-scrollbar-track{background:transparent}
     .messages::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
     .messages::-webkit-scrollbar-thumb:hover{background:#9ca3af}
 
-    .msg-row{display:flex;margin-bottom:12px;animation:fadeIn .3s ease}
+    .msg-row{display:flex;margin-bottom:14px;animation:fadeIn .3s ease}
     .msg-row.bot{justify-content:flex-start}
     .msg-row.user{justify-content:flex-end}
 
-    .bubble{max-width:85%;padding:11px 15px;border-radius:18px;font-size:15px;line-height:1.55;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
+    .bubble{max-width:82%;padding:12px 16px;border-radius:20px;font-size:14.5px;line-height:1.6;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
     .bubble:hover{transform:translateY(-1px)}
-    .bubble.bot{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 8px rgba(28,139,60,.18)}
+    .bubble.bot{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 10px rgba(28,139,60,.15)}
     .bubble.user{background:#fff;border:1.5px solid #e5e7eb;border-bottom-right-radius:6px;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.04)}
 
     .attachments{margin-top:10px}
 
     .gif-thumb{width:100%;max-width:700px;border-radius:14px;display:block;margin-top:8px;border:1px solid rgba(148,163,184,.5);cursor:zoom-in;background:#fff}
 
-    /* PDF inline */
     .pdf-inline{margin-top:10px;width:100%;max-width:720px;background:#fff;border:1px solid rgba(148,163,184,.5);border-radius:14px;overflow:hidden}
     .pdf-inline-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-bottom:1px solid rgba(226,232,240,.8);gap:10px}
     .pdf-inline-title{font-size:13px;font-weight:700;color:#065f46;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
@@ -60,32 +58,27 @@
     .pdf-inline-btn.secondary{background:#fff;color:#1C8B3C;border:1px solid #1C8B3C}
     .pdf-inline-frame{width:100%;height:420px;border:none;background:#f9fafb;display:block}
 
-    /* Typing indicator */
     .typing-indicator{background:#1C8B3C;color:#f9fafb;padding:10px 14px;display:flex;gap:4px;align-items:center}
     .typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:typing 1.4s infinite}
     .typing-dot:nth-child(2){animation-delay:.2s}
     .typing-dot:nth-child(3){animation-delay:.4s}
 
-    /* Side avatar */
     .side-avatar{width:40px;margin-top:6px;display:flex;justify-content:center;flex-shrink:0}
-    .side-avatar-inner{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1C8B3C,#16a34a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;overflow:hidden;object-fit:cover;box-shadow:0 2px 6px rgba(28,139,60,.15)}
+    .side-avatar-inner{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#1C8B3C,#16a34a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;overflow:hidden;object-fit:cover;box-shadow:0 2px 8px rgba(28,139,60,.15)}
     .side-avatar-inner img{width:100%;height:100%;object-fit:cover}
 
-    /* Resolve card */
-    .resolve-card{margin-top:10px;background:#fff;border:2px solid #f3f4f6;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.03)}
+    .resolve-card{margin-top:12px;background:#fff;border:2px solid #f3f4f6;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.03)}
     .resolve-text{font-size:13px;color:#0f172a;font-weight:600}
     .resolve-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .resolve-btn{border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.08)}
+    .resolve-btn{border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.08)}
     .resolve-btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.12)}
     .resolve-btn:active{transform:translateY(0)}
     .resolve-yes{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
     .resolve-no{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
 
-    /* WhatsApp button */
     .whatsapp-support-btn{display:inline-block;margin-top:10px;padding:8px 14px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;transition:all .2s ease;box-shadow:0 2px 6px rgba(37,211,102,.25)}
     .whatsapp-support-btn:hover{background:#20BA5A;transform:translateY(-1px);box-shadow:0 4px 10px rgba(37,211,102,.3)}
 
-    /* Modals */
     .modal-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:50;padding:16px}
     .modal-overlay.open{display:flex}
     .modal-content{width:100%;max-width:1000px;max-height:92vh;background:#020617;border-radius:16px;padding:10px;box-shadow:0 24px 48px rgba(0,0,0,.4);position:relative;display:flex;flex-direction:column;align-items:center}
@@ -100,9 +93,8 @@
     #pdf-modal-actions{margin-top:10px;text-align:center;width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
     #pdf-modal-download{padding:10px 14px;background:#1C8B3C;color:white;border-radius:999px;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px rgba(28,139,60,.15)}
 
-    /* ===== EMBED MODE ===== */
     body.embed-mode{background:#fff}
-    body.embed-mode .wrapper{padding:6px 8px 8px}
+    body.embed-mode .wrapper{padding:4px 6px 6px}
     body.embed-mode .top-row{display:none}
     body.embed-mode .chat-area{margin-top:0}
     body.embed-mode .side-avatar{display:none}
@@ -127,46 +119,49 @@
   </style>
 </head>
 
-<body class="h-screen w-screen m-0 p-0 bg-gradient-to-br from-brand-50 via-slate-50 to-sky-50 font-sans text-gray-900 flex items-stretch justify-stretch overflow-hidden antialiased">
+<body class="h-screen w-screen m-0 p-0 bg-gradient-to-br from-brand-50/50 via-white to-gray-50 font-sans text-gray-900 flex items-stretch justify-stretch overflow-hidden antialiased">
 
-  <div class="wrapper w-full h-full bg-white flex flex-col overflow-hidden p-5 sm:p-6">
+  <div class="wrapper w-full h-full bg-white flex flex-col overflow-hidden p-4 sm:p-6">
 
     <!-- Top Row -->
-    <div class="top-row flex items-center justify-between gap-4 pb-4 border-b-2 border-gray-100 mb-1">
+    <div class="top-row flex items-center justify-between gap-4 pb-4 border-b border-gray-100 mb-1">
       <div class="top-left flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/20 hover:scale-105 transition-transform">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/15 hover:scale-105 transition-transform">
           <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" class="w-full h-full object-cover" />
         </div>
         <div>
-          <p class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Assistente Virtual</p>
-          <p class="text-xl font-bold text-gray-900 tracking-tight mt-0.5">Urânia +</p>
+          <p class="text-xl font-bold text-gray-900 tracking-tight leading-tight">Urânia +</p>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+            <p class="text-[11px] text-gray-400 font-medium">Assistente Virtual</p>
+          </div>
         </div>
       </div>
       <div class="top-right text-xs text-gray-400 font-medium"></div>
     </div>
 
     <!-- Chat Area -->
-    <div class="chat-area mt-4 flex gap-3 items-start flex-1 min-h-0">
+    <div class="chat-area mt-3 flex gap-3 items-start flex-1 min-h-0">
       <div class="side-avatar">
         <div class="side-avatar-inner">
           <img src="https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg" alt="Avatar" />
         </div>
       </div>
 
-      <div class="chat-box flex-1 rounded-2xl border border-gray-100 p-4 bg-gray-50/50 flex flex-col gap-3 min-h-0 max-h-full shadow-inner shadow-gray-100/50">
+      <div class="chat-box flex-1 rounded-2xl border border-gray-100 p-3 sm:p-4 bg-gray-50/30 flex flex-col gap-3 min-h-0 max-h-full">
         <div id="chat-messages" class="messages"></div>
 
-        <div class="input-row flex items-stretch rounded-2xl border-2 border-gray-200 overflow-hidden bg-white shadow-sm transition-all duration-200 min-h-[54px] focus-within:border-brand-500 focus-within:shadow-md focus-within:shadow-brand-100/50 focus-within:-translate-y-px">
+        <div class="input-row flex items-stretch rounded-2xl border-2 border-gray-200 overflow-hidden bg-white shadow-sm transition-all duration-200 min-h-[52px] focus-within:border-brand-500 focus-within:shadow-md focus-within:shadow-brand-100/50 focus-within:-translate-y-px">
           <input id="chat-input" type="text"
-            class="flex-1 border-none px-5 py-4 text-[15px] outline-none bg-transparent text-gray-900 placeholder:text-gray-400"
-            placeholder="Digite sua mensagem aqui..." />
+            class="flex-1 border-none px-4 py-3.5 text-[15px] outline-none bg-transparent text-gray-900 placeholder:text-gray-400"
+            placeholder="Digite sua mensagem..." />
           <button id="chat-send"
-            class="border-none px-8 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed min-w-[110px]">
+            class="border-none px-6 sm:px-8 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-[14px] font-semibold cursor-pointer whitespace-nowrap transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed min-w-[90px] sm:min-w-[110px]">
             Enviar
           </button>
         </div>
 
-        <div id="chat-status" class="status-line text-xs text-gray-400 text-right mt-1 font-medium pr-1">Pronto para responder.</div>
+        <div id="chat-status" class="status-line text-[11px] text-gray-400 text-right mt-0.5 font-medium pr-1">Pronto para responder.</div>
       </div>
     </div>
   </div>
@@ -238,9 +233,11 @@
     return false;
   }
 
+  const parentOrigin = (document.referrer && isEmbedded) ? new URL(document.referrer).origin : "*";
+
   function notifyParent(type, data){
     if(window.parent !== window){
-      try { window.parent.postMessage(Object.assign({type: type}, data || {}), "*"); } catch(_){}
+      try { window.parent.postMessage(Object.assign({type: type}, data || {}), parentOrigin); } catch(_){}
     }
   }
 
@@ -504,11 +501,11 @@
       lock();
       try{
         await sendFeedback(true);
-        card.innerHTML = `<div class="resolve-text">Obrigado! Registramos sua resposta.</div>`;
+        card.innerHTML = '<div class="resolve-text">Obrigado! Registramos sua resposta.</div>';
         setTimeout(()=>resolveRow.remove(), 1500);
       }catch(e){
         console.error(e);
-        card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
+        card.innerHTML = '<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>';
         setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
@@ -517,11 +514,11 @@
       lock();
       try{
         await sendFeedback(false);
-        card.innerHTML = `<div class="resolve-text">Obrigado! Vamos melhorar para a próxima.</div>`;
+        card.innerHTML = '<div class="resolve-text">Obrigado! Vamos melhorar para a próxima.</div>';
         setTimeout(()=>resolveRow.remove(), 1700);
       }catch(e){
         console.error(e);
-        card.innerHTML = `<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>`;
+        card.innerHTML = '<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>';
         setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
@@ -562,7 +559,7 @@
         if(res.status === 503){
           const statusData = await checkChatStatus();
           const errorMsg = statusData.error_message || "Serviço temporariamente indisponível";
-          throw new Error(`SERVICE_UNAVAILABLE:${errorMsg}`);
+          throw new Error("SERVICE_UNAVAILABLE:" + errorMsg);
         }
         const errText = await res.text().catch(()=> "");
         throw new Error(errText || "Erro no servidor");

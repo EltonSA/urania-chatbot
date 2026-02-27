@@ -2,11 +2,14 @@
 Rotas para páginas HTML
 """
 import os
-from fastapi import APIRouter, Request, HTTPException, status
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
 from app.config import settings
+from app.database import get_db
+from app.utils import get_setting
 
 router = APIRouter(tags=["Páginas"])
 security = HTTPBearer(auto_error=False)
@@ -45,8 +48,21 @@ def admin_page(request: Request):
 
 @router.get("/widget", response_class=HTMLResponse)
 def widget_page():
-    """Página do widget de chat - Pública"""
-    return FileResponse(os.path.join(BASE_DIR, "widget.html"))
+    """Página do widget de chat - Pública (com proteção frame-ancestors)"""
+    file_path = os.path.join(BASE_DIR, "widget.html")
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    allowed = settings.widget_allowed_origins_list
+    if allowed:
+        csp = "frame-ancestors 'self' " + " ".join(allowed)
+    else:
+        csp = "frame-ancestors *"
+    
+    return HTMLResponse(
+        content=content,
+        headers={"Content-Security-Policy": csp}
+    )
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -55,6 +71,14 @@ def dashboard_page(request: Request):
     if not verify_token_from_cookie_or_header(request):
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     return FileResponse(os.path.join(BASE_DIR, "dashboard.html"))
+
+
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    """Página de configurações do sistema - Requer autenticação"""
+    if not verify_token_from_cookie_or_header(request):
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    return FileResponse(os.path.join(BASE_DIR, "settings.html"))
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -79,70 +103,28 @@ def conversation_view_page(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "conversation-view.html"))
 
 
+def _is_safe_redirect(url: str) -> bool:
+    """Aceita apenas URLs relativas (começando com /) para evitar open redirect"""
+    if not url:
+        return False
+    return url.startswith("/") and not url.startswith("//")
+
+
 @router.get("/")
-def root():
+def root(db: Session = Depends(get_db)):
     """
-    Endpoint raiz
-    
-    Comportamento:
-    - Em produção (DEBUG=False): redireciona para /widget por padrão
-    - Em desenvolvimento (DEBUG=True): retorna JSON com informações por padrão
-    - Pode ser configurado via ROOT_REDIRECT no .env:
-      * "widget" -> redireciona para /widget
-      * "admin" -> redireciona para /admin
-      * "dashboard" -> redireciona para /dashboard
-      * "login" -> redireciona para /login
-      * "json" -> retorna JSON (apenas em desenvolvimento)
-      * vazio -> usa padrão baseado em DEBUG
+    Endpoint raiz - comportamento configurável via painel de configurações.
+    Opções: blank (página em branco), widget (redireciona para chat), custom (URL relativa).
     """
-    # Determina o comportamento baseado na configuração
-    redirect_target = settings.ROOT_REDIRECT
-    
-    # Se não estiver configurado, usa padrão baseado em DEBUG
-    if not redirect_target:
-        if settings.DEBUG:
-            # Em desenvolvimento, retorna JSON
-            redirect_target = "json"
-        else:
-            # Em produção, redireciona para widget
-            redirect_target = "widget"
-    
-    # Executa redirecionamento ou retorna JSON
-    if redirect_target == "json":
-        # Apenas em desenvolvimento
-        if not settings.DEBUG:
-            # Em produção, força redirecionamento para widget mesmo se configurado como json
-            return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
-        
-        return {
-            "message": f"{settings.APP_NAME} está rodando.",
-            "version": settings.APP_VERSION,
-            "admin": "/admin",
-            "widget": "/widget",
-            "dashboard": "/dashboard",
-            "docs": "/docs" if settings.DEBUG else None,
-            "login": "/login"
-        }
-    elif redirect_target == "widget":
+    behavior = get_setting(db, "root_behavior") or "widget"
+
+    if behavior == "blank":
+        return HTMLResponse(content="", status_code=200)
+    elif behavior == "custom":
+        custom_url = get_setting(db, "root_custom_url") or ""
+        if custom_url and _is_safe_redirect(custom_url):
+            return RedirectResponse(url=custom_url, status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
-    elif redirect_target == "admin":
-        return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
-    elif redirect_target == "dashboard":
-        return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-    elif redirect_target == "login":
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     else:
-        # Valor inválido, usa padrão (widget em produção)
-        if settings.DEBUG:
-            return {
-                "message": f"{settings.APP_NAME} está rodando.",
-                "version": settings.APP_VERSION,
-                "admin": "/admin",
-                "widget": "/widget",
-                "dashboard": "/dashboard",
-                "docs": "/docs",
-                "login": "/login"
-            }
-        else:
-            return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)
 
