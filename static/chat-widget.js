@@ -62,12 +62,17 @@
       if (d.assistantName) C.assistantName = d.assistantName;
       if (d.avatarUrl) C.avatarUrl = d.avatarUrl;
       if (d.primaryColor) C.primaryColor = d.primaryColor;
+      if (!C.apiUrl && scriptTag.src) {
+        try {
+          C.apiUrl = new URL(scriptTag.src).origin;
+        } catch (_) {}
+      }
     }
   })();
 
-  var API = C.apiUrl;
-  var WIDGET_URL = API + '/widget?embed=1';
-  var TRUSTED_ORIGIN = API ? new URL(API).origin : window.location.origin;
+  var API = C.apiUrl || '';
+  var WIDGET_URL = API ? (API.replace(/\/$/, '') + '/widget?embed=1') : '/widget?embed=1';
+  var TRUSTED_ORIGIN = API ? (function () { try { return new URL(API).origin; } catch (_) { return window.location.origin; } })() : window.location.origin;
 
   /* ================================================================
      SESSION STORAGE (estado abrir/minimizar)

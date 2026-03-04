@@ -104,10 +104,17 @@ def conversation_view_page(request: Request):
 
 
 def _is_safe_redirect(url: str) -> bool:
-    """Aceita apenas URLs relativas (começando com /) para evitar open redirect"""
-    if not url:
+    """Aceita URLs relativas (/) ou absolutas (http/https). Rejeita javascript: e //"""
+    if not url or not url.strip():
         return False
-    return url.startswith("/") and not url.startswith("//")
+    url = url.strip()
+    if url.startswith("//") or url.lower().startswith("javascript:"):
+        return False
+    if url.startswith("/"):
+        return True
+    if url.lower().startswith("https://") or url.lower().startswith("http://"):
+        return True
+    return False
 
 
 @router.get("/")
@@ -121,7 +128,7 @@ def root(db: Session = Depends(get_db)):
     if behavior == "blank":
         return HTMLResponse(content="", status_code=200)
     elif behavior == "custom":
-        custom_url = get_setting(db, "root_custom_url") or ""
+        custom_url = (get_setting(db, "root_custom_url") or "").strip()
         if custom_url and _is_safe_redirect(custom_url):
             return RedirectResponse(url=custom_url, status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/widget", status_code=status.HTTP_302_FOUND)

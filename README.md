@@ -587,17 +587,24 @@ Isso significa que **toda a lógica do chat** (mensagens, anexos, feedback, stat
 <script src="/static/chat-widget.js"></script>
 ```
 
-**Uso em site externo** (domínio diferente):
+**Uso em site externo** (ex.: site em `beta.urania.com.br`, chat em `iabeta.urania.com.br`):
+
+A forma mais simples é **carregar o script a partir da URL do chatbot**. O widget usa a origem do script como URL da API, sem precisar configurar nada:
+
 ```html
-<script>
-  window.UraniaWidgetConfig = {
-    apiUrl: 'https://seu-dominio.com'
-  };
-</script>
-<script src="https://seu-dominio.com/static/chat-widget.js"></script>
+<script src="https://iabeta.urania.com.br/static/chat-widget.js"></script>
 ```
 
-> **Nota:** Para uso em domínios externos, adicione o domínio na variável `CORS_ORIGINS` do `.env`.
+Se preferir carregar o script de outro lugar, defina a URL do chat manualmente:
+
+```html
+<script>
+  window.UraniaWidgetConfig = { apiUrl: 'https://iabeta.urania.com.br' };
+</script>
+<script src="https://beta.urania.com.br/static/chat-widget.js"></script>
+```
+
+> **Nota:** Para uso em domínios externos, adicione o domínio em `WIDGET_ALLOWED_ORIGINS` (e `CORS_ORIGINS` se necessário) no `.env`.
 
 #### Configuração Avançada
 
@@ -606,7 +613,7 @@ Todas as opções podem ser configuradas via `window.UraniaWidgetConfig` ou via 
 ```html
 <script>
   window.UraniaWidgetConfig = {
-    apiUrl: '',                    // URL base da API (vazio = mesmo domínio)
+    apiUrl: '',                    // URL base da API (vazio = inferido da origem do script ou mesmo domínio)
     assistantName: 'Urânia +',     // Nome exibido no cabeçalho
     avatarUrl: 'https://...',      // URL do avatar do assistente
     primaryColor: '#1C8B3C',       // Cor principal do widget
