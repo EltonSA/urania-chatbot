@@ -102,6 +102,7 @@ async def startup_event():
     
     # Garante hash bcrypt da senha admin no banco
     try:
+        from sqlalchemy.exc import IntegrityError
         from app.database import SessionLocal
         from app.utils import get_setting, set_setting
         from app.auth import get_password_hash, verify_password
@@ -121,8 +122,11 @@ async def startup_event():
                     logger.info("Hash bcrypt da senha admin OK")
         finally:
             db.close()
+    except IntegrityError:
+        # Outro worker já inseriu admin_password_hash (múltiplos workers)
+        logger.info("Hash da senha admin já definido por outro processo")
     except Exception as e:
-        logger.warning("Não foi possível inicializar hash da senha no banco (banco somente leitura?): %s", e)
+        logger.warning("Não foi possível inicializar hash da senha no banco: %s", e)
     
     # Garante diretórios de upload
     try:
