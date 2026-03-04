@@ -4,6 +4,7 @@ Configuração do banco de dados
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import OperationalError
 from app.config import settings
 import logging
 
@@ -51,11 +52,18 @@ def get_db():
 
 def init_db():
     """
-    Inicializa o banco de dados criando todas as tabelas
-    Apenas cria tabelas se não existirem (não sobrescreve dados existentes)
+    Inicializa o banco de dados criando todas as tabelas.
+    Apenas cria tabelas se não existirem.
+    Com múltiplos workers (uvicorn --workers 4), mais de um processo pode
+    chamar init_db ao mesmo tempo; ignoramos "table already exists".
     """
     from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel, AuditLogModel
-    # create_all só cria tabelas que não existem, não apaga dados
-    Base.metadata.create_all(bind=engine, checkfirst=True)
-    logger.info("Banco de dados verificado e tabelas criadas (se necessário)")
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        logger.info("Banco de dados verificado e tabelas criadas (se necessário)")
+    except OperationalError as e:
+        if "already exists" in str(e).lower():
+            logger.info("Tabelas já existem (outro worker criou)")
+        else:
+            raise
 
