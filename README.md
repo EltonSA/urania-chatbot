@@ -138,6 +138,29 @@ A aplicação estará disponível em:
 - **API**: http://localhost:8000
 - **Documentação** (apenas em modo debug): http://localhost:8000/docs
 
+### Docker
+
+Build da imagem (na raiz do projeto):
+
+```bash
+docker build -t urania-plus .
+```
+
+Execução com variáveis de ambiente e volumes para persistir banco e uploads:
+
+```bash
+docker run -p 8000:8000 --env-file .env \
+  -v urania-data:/app/data \
+  -v urania-uploads:/app/uploads \
+  urania-plus
+```
+
+- `--env-file .env` — carrega SECRET_KEY, ADMIN_PASSWORD, OPENAI_API_KEY, etc.
+- `-v urania-data:/app/data` — persiste o SQLite
+- `-v urania-uploads:/app/uploads` — persiste PDFs e GIFs enviados
+
+A imagem usa usuário não-root e cria os diretórios `data/` e `uploads/` com permissão de escrita, evitando o erro "readonly database".
+
 ### Produção em VPS/Servidor
 
 #### Opção 1: Uvicorn Direto (Simples)
@@ -261,7 +284,8 @@ sudo systemctl status urania
 │   └── chat-widget.js        # Widget flutuante embeddable
 ├── scripts/                  # Scripts utilitários
 │   ├── backup.py             # Script de backup
-│   └── restore.py            # Script de restauração
+│   ├── restore.py            # Script de restauração
+│   └── fix_db_permissions.py # Ajusta permissões do SQLite (Linux)
 ├── data/                     # Banco de dados SQLite
 │   └── saas_chatbot.db
 ├── uploads/                  # Arquivos enviados
@@ -272,8 +296,10 @@ sudo systemctl status urania
 ├── dashboard.html            # Dashboard de métricas
 ├── login.html                # Página de login
 ├── settings.html             # Configurações do sistema
+├── .dockerignore             # Ignora arquivos no build Docker
 ├── .env                      # Variáveis de ambiente (criar)
 ├── .env.example              # Exemplo de configuração
+├── Dockerfile                # Build da imagem Docker
 ├── requirements.txt          # Dependências Python
 └── README.md                 # Este arquivo
 ```

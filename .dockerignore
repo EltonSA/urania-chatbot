@@ -1,0 +1,33 @@
+# Ambiente e cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Dados locais (no container criamos dirs vazios com permissão correta)
+data/
+uploads/
+
+# Git e IDE
+.git/
+.gitignore
+.cursor/
+
+# Config e segredos (passar em runtime com -e ou --env-file)
+.env
+.env.*
+!.env.example
+
+# Docs e legado (não precisam na imagem)
+*.md
+Dockerfile-old
+main_LEGACY_DO_NOT_USE.py
+
+# Backups e temporários
+backups/
+*.log
+*.tar.gz
