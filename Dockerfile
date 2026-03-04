@@ -45,11 +45,6 @@ RUN mkdir -p data uploads/pdfs uploads/gifs \
 
 USER appuser
 
+# 1 worker obrigatório com SQLite (evita 502).
 EXPOSE 8000
-
-# Variáveis de ambiente: passar com -e ou --env-file .env
-# Exemplo com volumes para persistir banco e uploads:
-#   docker run -p 8000:8000 --env-file .env \
-#     -v urania-data:/app/data -v urania-uploads:/app/uploads \
-#     urania-plus
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

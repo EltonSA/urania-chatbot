@@ -20,11 +20,10 @@ db_path_str = db_url.replace("sqlite:///", "")
 db_path = Path(db_path_str)
 if db_path.exists():
     logger.info(f"Banco de dados encontrado: {db_path.absolute()}")
-    # Verifica tamanho do banco
     size_mb = db_path.stat().st_size / (1024 * 1024)
     logger.info(f"Tamanho do banco: {size_mb:.2f} MB")
 else:
-    logger.warning(f"Banco de dados não encontrado em: {db_path.absolute()}")
+    logger.info(f"Banco será criado em: {db_path.absolute()}")
 
 engine = create_engine(
     db_url,
