@@ -40,8 +40,7 @@
   var DEFAULTS = {
     apiUrl: '',
     assistantName: 'Urânia +',
-    avatarUrl:
-      'https://i.postimg.cc/633Wxf2R/Whats-App-Image-2025-11-05-at-09-27-39.jpg',
+    avatarUrl: '',
     primaryColor: '#1C8B3C',
     primaryDark: '#15803d',
     zIndex: 99999,
@@ -73,6 +72,7 @@
   var API = C.apiUrl || '';
   var WIDGET_URL = API ? (API.replace(/\/$/, '') + '/widget?embed=1') : '/widget?embed=1';
   var TRUSTED_ORIGIN = API ? (function () { try { return new URL(API).origin; } catch (_) { return window.location.origin; } })() : window.location.origin;
+  if (!C.avatarUrl) C.avatarUrl = API ? (API.replace(/\/$/, '') + '/static/logo-uraia.jpg') : '/static/logo-uraia.jpg';
 
   /* ================================================================
      SESSION STORAGE (estado abrir/minimizar)
