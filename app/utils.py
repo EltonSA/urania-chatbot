@@ -235,6 +235,7 @@ Regra do should_ask_resolution:
 - Se estiver em dúvida, prefira false.
 
 IMPORTANTE - Direcionamento para Suporte Humano:
+- O painel pode ocultar apenas o botão "Solicitar suporte" no cartão "Conseguiu resolver?" — isso NÃO impede você de oferecer WhatsApp quando o usuário pedir suporte humano por texto na conversa.
 - Se o usuário insistir em falar com um humano, atendente, suporte humano, ou pessoa real, você DEVE:
   1. Oferecer educadamente direcionar para o suporte via WhatsApp
   2. Incluir no JSON: "needs_human_support": true

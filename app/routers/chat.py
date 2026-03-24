@@ -113,7 +113,10 @@ def chat_status(db: Session = Depends(get_db)):
     if settings.WHATSAPP_NUMBER:
         status["whatsapp_number"] = settings.WHATSAPP_NUMBER
 
-    status["satisfaction_support_enabled"] = get_setting(db, "satisfaction_support_button") != "false"
+    # Só o botão "Solicitar suporte" no cartão Sim/Não; não afeta WhatsApp quando a IA usa needs_human_support.
+    card_support_on = get_setting(db, "satisfaction_support_button") != "false"
+    status["satisfaction_support_enabled"] = card_support_on  # compat. widget antigo
+    status["resolution_card_support_button"] = card_support_on
 
     allowed = settings.widget_allowed_origins_list
     if allowed:

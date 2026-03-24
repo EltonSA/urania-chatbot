@@ -697,7 +697,8 @@
   }
 
   let whatsappNumber = "";
-  let satisfactionSupportEnabled = true;
+  /** Só o botão "Solicitar suporte" no cartão; Sim/Não ficam sempre. WhatsApp por needs_human_support não usa isto. */
+  let showResolutionCardSupportButton = true;
 
   function addWhatsAppButton(container){
     if(!whatsappNumber) return;
@@ -752,7 +753,7 @@
     noBtn.textContent = "Não";
 
     let supportBtn = null;
-    if(satisfactionSupportEnabled){
+    if(showResolutionCardSupportButton){
       supportBtn = document.createElement("button");
       supportBtn.className = "resolve-btn resolve-support";
       supportBtn.textContent = "Solicitar suporte";
@@ -957,7 +958,11 @@
       if(!res.ok) throw new Error("Erro ao verificar status");
       const data = await res.json();
       if(data.whatsapp_number) whatsappNumber = data.whatsapp_number;
-      satisfactionSupportEnabled = data.satisfaction_support_enabled !== false;
+      if(typeof data.resolution_card_support_button === "boolean"){
+        showResolutionCardSupportButton = data.resolution_card_support_button;
+      } else {
+        showResolutionCardSupportButton = data.satisfaction_support_enabled !== false;
+      }
       return data;
     }catch(err){
       console.error("Erro ao verificar status:", err);

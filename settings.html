@@ -250,16 +250,16 @@
 
         <div class="mt-5 pt-5 border-t border-gray-200 flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <div class="text-sm font-semibold text-gray-900">Satisfação do chat</div>
-            <p class="text-xs text-gray-500 mt-1 leading-relaxed">No cartão “Conseguiu resolver?”, exibe também o botão <strong>Solicitar suporte</strong> (além de Sim e Não). Desative se não quiser oferecer essa opção.</p>
+            <div class="text-sm font-semibold text-gray-900">Cartão “Conseguiu resolver?” — só o botão de suporte</div>
+            <p class="text-xs text-gray-500 mt-1 leading-relaxed">Os botões <strong>Sim</strong> e <strong>Não</strong> continuam sempre visíveis. Este interruptor esconde apenas <strong>Solicitar suporte</strong> nesse cartão. Se o cliente pedir humano ou WhatsApp <em>na conversa por texto</em>, a IA responde e o link de WhatsApp continua a aparecer quando configurado — não é bloqueado aqui.</p>
           </div>
-          <div class="toggle-track on flex-shrink-0" id="satisfaction-support-toggle" role="switch" tabindex="0" aria-label="Botão solicitar suporte na satisfação">
+          <div class="toggle-track on flex-shrink-0" id="satisfaction-support-toggle" role="switch" tabindex="0" aria-label="Mostrar botão Solicitar suporte no cartão Conseguiu resolver">
             <div class="toggle-thumb"></div>
           </div>
         </div>
         <div id="satisfaction-support-status" class="mt-3 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Botão “Solicitar suporte” visível no widget
+          “Solicitar suporte” visível no cartão (Sim/Não sempre ativos)
         </div>
 
         <div class="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200 text-[13px] text-gray-700">
@@ -411,10 +411,10 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     if (supStatus) {
       if (state.satisfaction_support_button) {
         supStatus.className = 'mt-3 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2';
-        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Botão “Solicitar suporte” visível no widget';
+        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>“Solicitar suporte” no cartão: visível · Sim/Não: sempre';
       } else {
         supStatus.className = 'mt-3 text-xs font-medium text-gray-600 bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 inline-flex items-center gap-2';
-        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Somente Sim / Não no cartão de satisfação';
+        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>“Solicitar suporte” no cartão: oculto · Sim/Não: sempre · WhatsApp pela IA: inalterado';
       }
     }
   }
