@@ -1,14 +1,15 @@
 # Urânia + - Sistema de Chatbot Inteligente
 
-Sistema profissional de chatbot SaaS desenvolvido para a **Urânia**, com gerenciamento inteligente de documentos (PDFs e GIFs), interface administrativa completa e dashboard de métricas em tempo real.
+Sistema profissional de chatbot SaaS desenvolvido para a **Urânia**, com gerenciamento de documentos (PDF, GIF e imagem), painel administrativo, histórico de conversas e dashboard de métricas com filtros por período.
 
 ## 📖 Sobre o Sistema
 
 O **Urânia +** é uma solução completa de atendimento automatizado que permite:
 
 - 🤖 **Chatbot Inteligente** - Respostas automáticas usando IA (OpenAI GPT)
-- 📄 **Gerenciamento de Documentos** - Upload e organização de PDFs e GIFs educativos
-- 📊 **Dashboard de Métricas** - Análise de desempenho, feedbacks e perguntas frequentes
+- 📄 **Gerenciamento de Documentos** - Upload e organização de PDFs, GIFs e imagens
+- 📊 **Dashboard de Métricas** - Filtro por período (UTC), métricas de chat, OpenAI e feedback por arquivo (Sim/Não)
+- 🗂️ **Histórico de conversas** - Lista paginada com filtro por data e satisfação, export TXT/PDF
 - 🔐 **Painel Administrativo** - Interface completa para gerenciar conteúdo e configurações
 - 📱 **Widget de Chat** - Interface moderna e responsiva para os clientes
 - 💬 **Widget Flutuante** - Botão de chat embeddable para qualquer página (único `<script>`)
@@ -20,7 +21,7 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 - ✅ **Senhas com bcrypt** - Hash bcrypt direto (sem passlib), compatível com Python 3.13+
 - ✅ **Proteção brute force** - Bloqueio automático após 5 tentativas falhas de login por IP (15 min)
 - ✅ **Rate Limiting robusto** - Proteção contra DDoS com limite de 10.000 IPs rastreados e cleanup automático
-- ✅ **Validação de uploads** - Verificação de magic bytes (assinatura real) dos arquivos PDF e GIF
+- ✅ **Validação de uploads** - Verificação de magic bytes (assinatura real) de PDF, GIF e imagens
 - ✅ **Proteção contra Open Redirect** - URLs de redirecionamento validadas como relativas
 - ✅ **Logging Profissional** - Sistema completo de logs estruturados com auditoria
 - ✅ **Arquitetura Modular** - Código organizado, escalável e manutenível
@@ -29,7 +30,7 @@ O **Urânia +** é uma solução completa de atendimento automatizado que permit
 - ✅ **CORS Configurável** - Segurança configurável para diferentes ambientes
 - ✅ **Documentação Automática** - Swagger/ReDoc integrado (apenas em desenvolvimento)
 - ✅ **Categorização Inteligente** - IA agrupa perguntas similares automaticamente
-- ✅ **Exportação de Dados** - Exportação de estatísticas para Excel
+- ✅ **Exportação de Dados** - Estatísticas para Excel (com o mesmo filtro de datas do dashboard) e conversas em TXT/PDF
 - ✅ **Logs de auditoria** - Registro de login, upload, edição, exclusão e alterações de configuração
 - ✅ **Validação OpenAI gratuita** - Verificação da API key no startup sem consumir tokens
 
@@ -133,6 +134,7 @@ A aplicação estará disponível em:
 - **Widget de Chat**: http://localhost:8000/widget
 - **Painel Admin**: http://localhost:8000/admin
 - **Dashboard**: http://localhost:8000/dashboard
+- **Conversas**: http://localhost:8000/conversations
 - **Configurações**: http://localhost:8000/settings
 - **Login**: http://localhost:8000/login
 - **API**: http://localhost:8000
@@ -265,6 +267,7 @@ sudo systemctl status urania
 │   ├── schemas.py            # Schemas Pydantic (validação)
 │   ├── auth.py               # Autenticação JWT + bcrypt
 │   ├── utils.py              # Funções utilitárias (IA, busca, etc.)
+│   ├── date_range.py         # Intervalo de datas UTC (dashboard, stats, conversas)
 │   ├── openai_status.py      # Status da conexão OpenAI
 │   ├── routers/              # Rotas da API organizadas
 │   │   ├── auth.py           # Login/logout + proteção brute force
@@ -281,6 +284,7 @@ sudo systemctl status urania
 │   ├── admin.js
 │   ├── dashboard.css
 │   ├── dashboard.js
+│   ├── conversations.js    # UI do histórico de conversas
 │   └── chat-widget.js        # Widget flutuante embeddable
 ├── scripts/                  # Scripts utilitários
 │   ├── backup.py             # Script de backup
@@ -288,12 +292,14 @@ sudo systemctl status urania
 │   └── fix_db_permissions.py # Ajusta permissões do SQLite (Linux)
 ├── data/                     # Banco de dados SQLite
 │   └── saas_chatbot.db
-├── uploads/                  # Arquivos enviados
-│   ├── pdfs/                 # PDFs educativos
-│   └── gifs/                 # GIFs explicativos
+├── uploads/                  # Arquivos enviados (user-generated; images/ no .gitignore)
+│   ├── pdfs/
+│   ├── gifs/
+│   └── images/               # Imagens (PNG/JPEG/WebP)
 ├── widget.html               # Interface do chat (widget)
 ├── admin.html                # Painel administrativo
 ├── dashboard.html            # Dashboard de métricas
+├── conversations.html        # Histórico de conversas (admin)
 ├── login.html                # Página de login
 ├── settings.html             # Configurações do sistema
 ├── .dockerignore             # Ignora arquivos no build Docker
@@ -481,6 +487,7 @@ Authorization: Bearer eyJ...
 - `GET /widget` - Widget de chat para clientes
 - `GET /admin` - Painel administrativo (requer autenticação)
 - `GET /dashboard` - Dashboard de métricas (requer autenticação)
+- `GET /conversations` - Histórico de conversas com mensagens e auditoria (requer autenticação)
 - `GET /settings` - Configurações do sistema (requer autenticação)
 - `GET /login` - Página de login
 
@@ -490,6 +497,7 @@ Authorization: Bearer eyJ...
 - `POST /chat/feedback` - Feedback do usuário (Sim/Não)
 - `GET /files/pdf/{id}` - Visualizar/Download de PDF
 - `GET /files/gif/{id}` - Visualizar GIF
+- `GET /files/image/{id}` - Visualizar imagem (PNG/JPEG/WebP)
 
 ### API Administrativa (requerem autenticação JWT)
 - `POST /auth/login` - Autenticação e obtenção de token (proteção brute force)
@@ -501,13 +509,13 @@ Authorization: Bearer eyJ...
 - `DELETE /admin/files/{id}` - Deletar arquivo
 - `GET /admin/prompt` - Obter prompt do sistema
 - `PUT /admin/prompt` - Atualizar prompt do sistema
-- `GET /admin/stats` - Estatísticas completas do sistema
-- `GET /admin/export.xlsx` - Exportar estatísticas para Excel
+- `GET /admin/stats` - Estatísticas completas (query opcional: `date_from`, `date_to` em `YYYY-MM-DD` UTC)
+- `GET /admin/export.xlsx` - Exportar estatísticas para Excel (mesmos parâmetros de data)
 - `GET /admin/system-settings` - Obter configurações do sistema
 - `PUT /admin/system-settings` - Salvar configurações (validação Pydantic)
 - `GET /admin/audit-logs` - Logs de auditoria paginados
 - `GET /admin/backup` - Download de backup completo
-- `GET /admin/conversations/` - Listar conversas paginadas
+- `GET /admin/conversations/` - Listar conversas paginadas (`page`, `limit`, `satisfaction`, `date_from`, `date_to`)
 - `GET /admin/conversations/{id}` - Detalhes de uma conversa
 - `GET /admin/conversations/{id}/export/txt` - Exportar conversa em TXT
 - `GET /admin/conversations/{id}/export/pdf` - Exportar conversa em PDF
@@ -525,7 +533,7 @@ Authorization: Bearer eyJ...
 - ✅ **Mensagens de erro seguras** — detalhes técnicos apenas nos logs, nunca expostos ao usuário
 - ✅ **Logs de auditoria** — login, upload, edição, exclusão e alterações de configuração registrados
 - ✅ **Docs desabilitados em produção** — Swagger/ReDoc só disponíveis com `DEBUG=True`
-- ✅ **Validação de extensões e tamanho** — apenas PDF/GIF, máximo 50MB configurável
+- ✅ **Validação de extensões e tamanho** — PDF, GIF e imagens permitidas; tamanho máximo configurável
 
 ## 📝 Logging e Auditoria
 
@@ -687,14 +695,14 @@ Página centralizada para gerenciar o comportamento do sistema:
 - Gerenciamento de conversas (histórico, exportação TXT/PDF)
 
 ### Dashboard de Métricas
-- Total de mensagens e chats iniciados (com registro correto de `user_message` e `bot_message`)
-- Taxa de resolução (Sim/Não)
-- Contagem de PDFs e GIFs enviados
-- Detratores (usuários sem feedback)
+- Filtro por período (datas em UTC; um único dia se preencher só «De» ou só «Até»)
+- Total de mensagens e chats iniciados (eventos `user_message` / `bot_message`)
+- Taxa de resolução (Sim/Não) e métricas OpenAI (sucesso/erro)
+- Contagem de PDFs, GIFs e imagens enviados
+- Detratores (sessões com chat sem feedback no período)
 - Redirecionamentos para suporte humano
-- Top 10 perguntas frequentes (categorizadas por IA)
-- Arquivos que não resolveram problemas
-- Exportação de dados para Excel
+- Painel **Arquivos — feedback (Sim / Não)**: por arquivo, quantos cliques em «Resolveu» vs «Não resolveu» (ligados ao último envio na sessão; «Sim» conta a partir do evento `file_resolved`)
+- Exportação para Excel (inclui tabela de arquivos com Sim/Não quando houver dados)
 
 ## 🔄 Migração do Código Antigo
 
@@ -708,33 +716,19 @@ Para usar a nova versão:
 
 ## 🚀 Deploy em Produção
 
-### Validação Automática
+### Antes do deploy
 
-Antes de colocar em produção, execute o script de validação:
-
-```bash
-python scripts/validate_production.py
-```
-
-Este script verifica:
-- ✅ Configurações de segurança (SECRET_KEY, ADMIN_PASSWORD, DEBUG, CORS)
-- ✅ Diretórios necessários (data/, uploads/, backups/)
-- ✅ Dependências instaladas
-- ✅ Arquivo .env configurado
+Confira o checklist abaixo e as variáveis em `.env`.
 
 ### Checklist de Deploy
 
-Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md).
-
-**Resumo rápido:**
+**Resumo:**
 
 1. **Configuração do Ambiente**
-   - [ ] Python 3.8+ instalado
+   - [ ] Python 3.10+ instalado
    - [ ] Ambiente virtual criado e ativado
    - [ ] Dependências instaladas (`pip install -r requirements.txt`)
    - [ ] Arquivo `.env` configurado com todas as variáveis
-   - [ ] Execute `python scripts/validate_production.py` para validar
-
 2. **Segurança**
    - [ ] `SECRET_KEY` alterada (não usar valor padrão)
    - [ ] `ADMIN_PASSWORD` alterada (não usar valor padrão)
@@ -750,7 +744,7 @@ Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST
 
 4. **Uploads**
    - [ ] Diretório `uploads/` criado e com permissões corretas
-   - [ ] Subdiretórios `uploads/pdfs/` e `uploads/gifs/` criados
+   - [ ] Subdiretórios `uploads/pdfs/`, `uploads/gifs/` e `uploads/images/` criados (o app cria ao subir se necessário)
 
 5. **Servidor Web (Opcional mas Recomendado)**
    - [ ] Nginx instalado e configurado
@@ -846,7 +840,8 @@ Para um checklist completo e detalhado, consulte o arquivo [PRODUCTION_CHECKLIST
 - **JWT (python-jose)** - Autenticação segura
 - **bcrypt** - Hash de senhas (direto, sem passlib)
 - **Uvicorn** - Servidor ASGI de alta performance
-- **OpenPyXL** - Exportação de dados para Excel
+- **OpenPyXL** - Exportação de estatísticas para Excel
+- **ReportLab** - Exportação de conversas em PDF
 
 ## 💾 Backup e Migração
 
