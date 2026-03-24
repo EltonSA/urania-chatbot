@@ -88,6 +88,16 @@ class SystemSettingsBody(BaseModel):
     root_custom_url: Optional[str] = Field(None, max_length=500)
     widget_enabled: Optional[bool] = None
     satisfaction_support_button: Optional[bool] = None
+    system_display_name: Optional[str] = Field(None, max_length=120)
+
+    @validator("system_display_name")
+    def strip_display_name(cls, v):
+        if v is None:
+            return None
+        s = v.strip()
+        if "\n" in s or "\r" in s:
+            raise ValueError("Nome não pode conter quebras de linha")
+        return s
 
     @validator("root_custom_url")
     def validate_safe_url(cls, v):

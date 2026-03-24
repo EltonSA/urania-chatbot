@@ -4,7 +4,7 @@ Rotas administrativas
 from io import BytesIO
 from typing import List, Optional, Any, Dict
 from collections import Counter
-from fastapi import APIRouter, HTTPException, Depends, Request, status, Query
+from fastapi import APIRouter, HTTPException, Depends, Request, status, Query, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import distinct, func, case, String, not_, desc
@@ -13,7 +13,14 @@ from openpyxl import Workbook
 from app.database import get_db
 from app.schemas import PromptBody, SystemSettingsBody
 from app.auth import get_current_user
-from app.utils import get_setting, set_setting, ensure_upload_dirs, log_audit
+from app.utils import (
+    get_setting,
+    set_setting,
+    ensure_upload_dirs,
+    log_audit,
+    branding_dir_path,
+    resolve_branding_favicon,
+)
 from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogModel
 from app.config import settings
 from app.date_range import parse_stats_date_range
@@ -280,11 +287,17 @@ def get_system_settings(
     current_user: dict = Depends(get_current_user)
 ):
     """Obtém configurações do sistema. Requer autenticação"""
+    fav_path, _ = resolve_branding_favicon()
     return {
         "root_behavior": get_setting(db, "root_behavior") or "widget",
         "root_custom_url": get_setting(db, "root_custom_url") or "",
         "widget_enabled": get_setting(db, "widget_enabled") != "false",
         "satisfaction_support_button": get_setting(db, "satisfaction_support_button") != "false",
+        "system_display_name": get_setting(db, "system_display_name") or "",
+        "default_display_name": settings.APP_NAME,
+        "has_custom_favicon": fav_path is not None,
+        "app_version": settings.resolved_app_version,
+        "app_version_env": settings.APP_VERSION,
     }
 
 
@@ -313,8 +326,99 @@ def save_system_settings(
             set_setting(db, key, value)
             if old != value:
                 changes.append(f"{key}: {old} → {value}")
+    if body.system_display_name is not None:
+        old = get_setting(db, "system_display_name") or ""
+        new_val = body.system_display_name
+        set_setting(db, "system_display_name", new_val)
+        if old != new_val:
+            changes.append(f"system_display_name: {old!r} → {new_val!r}")
+
     if changes:
         log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=request.client.host if request.client else None)
+    return {"ok": True}
+
+
+MAX_BRANDING_FAVICON_BYTES = 512 * 1024
+
+
+@router.post("/branding/favicon")
+async def upload_branding_favicon(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Substitui o favicon do site (.ico ou .png, máx. 512 KB)."""
+    fn = (file.filename or "").lower()
+    ct = (file.content_type or "").lower()
+    if fn.endswith(".ico") or "icon" in ct or "/ico" in ct:
+        ext = "ico"
+    elif fn.endswith(".png") or "png" in ct:
+        ext = "png"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie um arquivo .ico ou .png",
+        )
+    data = await file.read()
+    if len(data) > MAX_BRANDING_FAVICON_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo muito grande (máximo 512 KB)",
+        )
+    if len(data) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo inválido ou corrompido",
+        )
+    d = branding_dir_path()
+    for name in ("favicon.ico", "favicon.png"):
+        p = d / name
+        if p.is_file():
+            try:
+                p.unlink()
+            except OSError:
+                pass
+    out_name = "favicon.ico" if ext == "ico" else "favicon.png"
+    out = d / out_name
+    out.write_bytes(data)
+    log_audit(
+        db,
+        "branding_favicon_uploaded",
+        "config",
+        out_name,
+        user=current_user.get("sub"),
+        ip=request.client.host if request.client else None,
+    )
+    return {"ok": True, "filename": out_name}
+
+
+@router.delete("/branding/favicon")
+def delete_branding_favicon(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove o favicon personalizado (volta ao /static/favicon.ico)."""
+    d = branding_dir_path()
+    removed = []
+    for name in ("favicon.ico", "favicon.png"):
+        p = d / name
+        if p.is_file():
+            try:
+                p.unlink()
+                removed.append(name)
+            except OSError:
+                pass
+    if removed:
+        log_audit(
+            db,
+            "branding_favicon_removed",
+            "config",
+            ", ".join(removed),
+            user=current_user.get("sub"),
+            ip=request.client.host if request.client else None,
+        )
     return {"ok": True}
 
 

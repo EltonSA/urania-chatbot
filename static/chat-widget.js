@@ -16,7 +16,8 @@
  *
  * Configurações disponíveis (window.UraniaWidgetConfig):
  *   apiUrl        - URL base do serviço de chat (obrigatório se cross-domain)
- *   assistantName - Nome exibido no header (padrão: 'Urânia +')
+ *   assistantName - Nome no header do balão (se omitido, usa GET /branding no mesmo host da API).
+ *   GET /branding inclui version (Git describe / BUILD_VERSION / CI / fallback .env).
  *   avatarUrl     - URL da imagem do avatar
  *   primaryColor  - Cor principal (padrão: '#1C8B3C')
  *   primaryDark   - Cor escura do gradiente (padrão: '#15803d')
@@ -439,9 +440,28 @@
   /* ================================================================
      INIT
      ================================================================ */
+  function fetchBrandingName() {
+    if (!API) return;
+    var cfg = window.UraniaWidgetConfig || {};
+    if (Object.prototype.hasOwnProperty.call(cfg, 'assistantName')) return;
+    var url = API.replace(/\/$/, '') + '/branding';
+    fetch(url)
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (b) {
+        if (!b || !b.display_name) return;
+        C.assistantName = b.display_name;
+        var nm = document.querySelector('.ucw-hdr-name');
+        if (nm) nm.textContent = b.display_name;
+      })
+      .catch(function () {});
+  }
+
   function init() {
     injectCSS();
     buildDOM();
+    fetchBrandingName();
     bind();
     checkStatus();
 

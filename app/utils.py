@@ -8,6 +8,7 @@ import json
 import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Tuple
+from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models import FileModel
@@ -285,9 +286,37 @@ def ensure_upload_dirs():
     pdf_dir = upload_dir / "pdfs"
     gif_dir = upload_dir / "gifs"
     image_dir = upload_dir / "images"
+    branding_dir = upload_dir / "branding"
     pdf_dir.mkdir(parents=True, exist_ok=True)
     gif_dir.mkdir(parents=True, exist_ok=True)
     image_dir.mkdir(parents=True, exist_ok=True)
+    branding_dir.mkdir(parents=True, exist_ok=True)
     return str(pdf_dir), str(gif_dir), str(image_dir)
+
+
+def branding_dir_path() -> Path:
+    """Diretório para favicon e outros assets de marca (criado se necessário)."""
+    p = settings.upload_dir_path / "branding"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def resolve_branding_favicon() -> Tuple[Optional[Path], Optional[str]]:
+    """Retorna (path, media_type) do favicon personalizado, se existir."""
+    base = settings.upload_dir_path / "branding"
+    if not base.is_dir():
+        return None, None
+    for name, mime in (("favicon.ico", "image/x-icon"), ("favicon.png", "image/png")):
+        cand = base / name
+        if cand.is_file():
+            return cand, mime
+    return None, None
+
+
+def branding_favicon_cache_bust() -> int:
+    path, _ = resolve_branding_favicon()
+    if path:
+        return int(path.stat().st_mtime)
+    return 0
 
 

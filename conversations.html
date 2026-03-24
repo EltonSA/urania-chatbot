@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <title>Histórico de conversas - Urânia +</title>
+  <meta name="page-title-part" content="Histórico de conversas" />
+  <title>Histórico de conversas</title>
+  <script src="/static/apply-branding.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,11 +42,12 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-200/80 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
   <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100 flex-shrink-0">
     <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-2 ring-brand-100">
-      <img src="/static/logo-urania.jpg" alt="Urânia +" class="w-full h-full object-cover" />
+      <img src="/static/logo-urania.jpg" alt="Urânia +" data-brand-logo-alt class="w-full h-full object-cover" />
     </div>
     <div class="min-w-0">
-      <div class="text-sm font-bold text-gray-900 tracking-tight">Urânia +</div>
-      <div class="text-[10px] text-gray-400 font-medium">Sistema de Chatbot</div>
+      <div class="text-sm font-bold text-gray-900 tracking-tight" data-brand-name>Urânia +</div>
+      <div class="text-[10px] text-gray-400 font-medium leading-tight">Sistema de Chatbot</div>
+      <div class="text-[9px] text-gray-300 font-medium mt-0.5 tabular-nums min-h-[14px]" data-brand-version></div>
     </div>
   </div>
 

@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
-  <title>Widget do Chatbot</title>
+  <meta name="page-title-part" content="Chat" />
+  <title>Chat</title>
+  <script src="/static/apply-branding.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -164,24 +166,24 @@
     <div class="top-row flex items-center justify-between gap-4 pb-4 border-b border-gray-100 mb-1">
       <div class="top-left flex items-center gap-3">
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/15 hover:scale-105 transition-transform">
-          <img src="/static/logo-urania.jpg" alt="Avatar" class="w-full h-full object-cover" />
+          <img src="/static/logo-urania.jpg" alt="Avatar" data-brand-logo-alt class="w-full h-full object-cover" />
         </div>
         <div>
-          <p class="text-xl font-bold text-gray-900 tracking-tight leading-tight">Urânia +</p>
+          <p class="text-xl font-bold text-gray-900 tracking-tight leading-tight" data-brand-name>Urânia +</p>
           <div class="flex items-center gap-1.5 mt-0.5">
             <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
             <p class="text-[11px] text-gray-400 font-medium">Assistente Virtual</p>
           </div>
         </div>
       </div>
-      <div class="top-right text-xs text-gray-400 font-medium"></div>
+      <div class="top-right text-[10px] text-gray-300 font-medium tabular-nums min-h-[14px]" data-brand-version></div>
     </div>
 
     <!-- Chat Area -->
     <div class="chat-area mt-3 flex gap-3 items-start flex-1 min-h-0">
       <div class="side-avatar">
         <div class="side-avatar-inner">
-          <img src="/static/logo-urania.jpg" alt="Avatar" />
+          <img src="/static/logo-urania.jpg" alt="Avatar" data-brand-logo-alt />
         </div>
       </div>
 

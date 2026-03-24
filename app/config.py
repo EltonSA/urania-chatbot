@@ -55,7 +55,14 @@ class Settings(BaseSettings):
     def widget_allowed_origins_list(self) -> List[str]:
         """Retorna lista de origens permitidas para o widget"""
         return [origin.strip() for origin in self.WIDGET_ALLOWED_ORIGINS.split(",") if origin.strip()]
-    
+
+    @property
+    def resolved_app_version(self) -> str:
+        """Versão exibida (Git describe, CI ou APP_VERSION). Ver app/version_info.py."""
+        from app.version_info import get_display_version
+
+        return get_display_version(self.APP_VERSION)
+
     # Banco de dados
     DATABASE_URL: str = Field(
         default="",

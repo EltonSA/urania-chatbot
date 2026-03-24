@@ -168,6 +168,12 @@ def main():
                     for img_file in image_dir.iterdir():
                         if img_file.is_file():
                             tar.add(img_file, arcname=f"uploads/images/{img_file.name}")
+
+                branding_dir = upload_dir / "branding"
+                if branding_dir.exists():
+                    for bf in branding_dir.iterdir():
+                        if bf.is_file():
+                            tar.add(bf, arcname=f"uploads/branding/{bf.name}")
                 
                 safe_print("   OK - Arquivos de upload adicionados")
             
@@ -175,7 +181,8 @@ def main():
             backup_info = {
                 "timestamp": timestamp,
                 "app_name": settings.APP_NAME,
-                "app_version": settings.APP_VERSION,
+                "app_version": settings.resolved_app_version,
+                "app_version_env": settings.APP_VERSION,
                 "database_included": db_path is not None and db_path.exists(),
                 "uploads_included": upload_dir is not None and upload_dir.exists(),
                 "pdf_count": pdf_count,

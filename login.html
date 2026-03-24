@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
-  <title>Login - Urânia +</title>
+  <meta name="page-title-part" content="Login" />
+  <title>Login</title>
+  <script src="/static/apply-branding.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -58,9 +60,9 @@
       <!-- Logo Section -->
       <div class="text-center mb-10">
         <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-brand-600/25 hover:scale-105 transition-transform duration-300 overflow-hidden ring-4 ring-brand-100">
-          <img src="/static/logo-urania.jpg" alt="Avatar Urânia +" class="w-full h-full object-cover" />
+          <img src="/static/logo-urania.jpg" alt="Avatar Urânia +" data-brand-logo-alt class="w-full h-full object-cover" />
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900">Urânia +</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900" data-brand-name>Urânia +</h1>
         <p class="text-sm text-gray-500 mt-1.5 font-medium">Acesse o Painel Administrativo</p>
       </div>
 
@@ -115,6 +117,7 @@
       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Conexão segura
     </div>
+    <p class="text-center text-[10px] text-gray-300 font-medium mt-3 tabular-nums min-h-[14px]" data-brand-version></p>
   </div>
 
   <script>

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, files, chat, admin, pages, public_files, conversations
+from app.routers import auth, files, chat, admin, pages, public_files, conversations, branding
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils import validate_openai_connection
 from app.openai_status import set_status
@@ -41,7 +41,7 @@ redoc_url = "/redoc" if settings.DEBUG else None
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    version=settings.resolved_app_version,
     description="Sistema profissional de chatbot SaaS com gerenciamento de PDFs e GIFs",
     docs_url=docs_url,
     redoc_url=redoc_url
@@ -68,7 +68,12 @@ if settings.RATE_LIMIT_ENABLED:
 @app.on_event("startup")
 async def startup_event():
     """Evento de inicialização"""
-    logger.info(f"Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(
+        "Iniciando %s — versão exibida: %s (APP_VERSION .env: %s)",
+        settings.APP_NAME,
+        settings.resolved_app_version,
+        settings.APP_VERSION,
+    )
     logger.info(f"Modo debug: {settings.DEBUG}")
     
     # Valida configurações de produção
@@ -139,8 +144,13 @@ async def startup_event():
 # Health check (para Coolify, load balancers e proxies)
 @app.get("/health")
 def health():
-    """Retorna 200 se a aplicação está no ar. Usado por Coolify e proxies."""
-    return {"status": "ok"}
+    """Retorna 200 se a aplicação está no ar. version = Git/CI ou APP_VERSION (.env)."""
+    return {
+        "status": "ok",
+        "version": settings.resolved_app_version,
+        "app_name": settings.APP_NAME,
+        "app_version_env": settings.APP_VERSION,
+    }
 
 # Inclui routers
 app.include_router(auth.router)
@@ -149,6 +159,7 @@ app.include_router(public_files.router)  # Arquivos públicos (sem auth)
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(conversations.router)
+app.include_router(branding.router)
 app.include_router(pages.router)
 
 # Arquivos estáticos
