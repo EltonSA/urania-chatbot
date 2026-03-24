@@ -113,7 +113,7 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-200/80 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
   <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100 flex-shrink-0">
     <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-2 ring-brand-100">
-      <img src="/static/logo-urania.jpg" alt="Urânia +" data-brand-logo-alt class="w-full h-full object-cover" />
+      <img src="/branding/logo" alt="Urânia +" data-brand-logo data-brand-logo-alt class="w-full h-full object-cover" />
     </div>
     <div class="min-w-0">
       <div class="text-sm font-bold text-gray-900 tracking-tight" data-brand-name>Urânia +</div>
@@ -202,9 +202,9 @@
       <div class="settings-card">
         <div class="card-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-          Nome do sistema e favicon
+          Nome do sistema, imagens e favicon
         </div>
-        <p class="card-desc">Texto exibido no painel, nas abas do navegador e no cabeçalho do widget flutuante (salvo se o site fixar outro nome no script). Ícone da aba (.ico ou .png).</p>
+        <p class="card-desc">Nome no painel e abas; logo do menu e login; avatar da IA no chat e no widget flutuante; favicon. No chat, se não houver avatar próprio, usa a mesma imagem da logo.</p>
         <div class="mt-5 space-y-5">
           <div>
             <label for="system-display-name" class="block text-xs font-semibold text-gray-700 mb-1.5">Nome exibido</label>
@@ -221,6 +221,28 @@
               <button type="button" id="btn-favicon-remove" class="text-sm font-medium text-red-600 hover:text-red-700 hidden bg-transparent border-0 cursor-pointer font-[inherit] p-0">Remover ícone personalizado</button>
             </div>
             <p class="text-[11px] text-gray-400 mt-1.5">Até 512 KB. Sem arquivo personalizado, usa o favicon padrão em <code class="bg-gray-100 px-1 rounded">/static/favicon.ico</code>.</p>
+          </div>
+          <div>
+            <span class="block text-xs font-semibold text-gray-700 mb-1.5">Logo do painel e login</span>
+            <div class="flex flex-wrap items-center gap-3">
+              <img id="logo-preview" src="/branding/logo" alt="" class="w-14 h-14 rounded-xl border border-gray-200 object-cover bg-white shadow-sm" width="56" height="56" />
+              <label class="text-sm text-gray-600 cursor-pointer inline-flex items-center gap-2">
+                <input type="file" id="logo-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="text-sm max-w-[200px]" />
+              </label>
+              <button type="button" id="btn-logo-remove" class="text-sm font-medium text-red-600 hover:text-red-700 hidden bg-transparent border-0 cursor-pointer font-[inherit] p-0">Remover logo personalizada</button>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1.5">PNG, JPG ou WebP, até 2 MB. Padrão: <code class="bg-gray-100 px-1 rounded">/static/logo-urania.jpg</code>.</p>
+          </div>
+          <div>
+            <span class="block text-xs font-semibold text-gray-700 mb-1.5">Avatar da IA no chat</span>
+            <div class="flex flex-wrap items-center gap-3">
+              <img id="chat-avatar-preview" src="/branding/chat-avatar" alt="" class="w-14 h-14 rounded-xl border border-gray-200 object-cover bg-white shadow-sm" width="56" height="56" />
+              <label class="text-sm text-gray-600 cursor-pointer inline-flex items-center gap-2">
+                <input type="file" id="chat-avatar-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="text-sm max-w-[200px]" />
+              </label>
+              <button type="button" id="btn-chat-avatar-remove" class="text-sm font-medium text-red-600 hover:text-red-700 hidden bg-transparent border-0 cursor-pointer font-[inherit] p-0">Remover avatar só do chat</button>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1.5">Mesmos formatos. Se remover, o chat usa a logo do painel (ou a imagem padrão).</p>
           </div>
           <div class="pt-4 border-t border-gray-100">
             <span class="block text-xs font-semibold text-gray-700 mb-1">Versão do sistema</span>
@@ -404,6 +426,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     system_display_name: '',
     default_display_name: '',
     has_custom_favicon: false,
+    has_custom_logo: false,
+    has_custom_chat_avatar: false,
     app_version: ''
   };
 
@@ -424,6 +448,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         state.system_display_name = d.system_display_name || '';
         state.default_display_name = d.default_display_name || '';
         state.has_custom_favicon = !!d.has_custom_favicon;
+        state.has_custom_logo = !!d.has_custom_logo;
+        state.has_custom_chat_avatar = !!d.has_custom_chat_avatar;
         state.app_version = d.app_version || '';
         render();
       })
@@ -484,6 +510,24 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       if (state.has_custom_favicon) favRemove.classList.remove('hidden');
       else favRemove.classList.add('hidden');
     }
+    var logoPrev = document.getElementById('logo-preview');
+    var logoRemove = document.getElementById('btn-logo-remove');
+    if (logoPrev) {
+      logoPrev.src = '/branding/logo?v=' + Date.now();
+    }
+    if (logoRemove) {
+      if (state.has_custom_logo) logoRemove.classList.remove('hidden');
+      else logoRemove.classList.add('hidden');
+    }
+    var capPrev = document.getElementById('chat-avatar-preview');
+    var capRemove = document.getElementById('btn-chat-avatar-remove');
+    if (capPrev) {
+      capPrev.src = '/branding/chat-avatar?v=' + Date.now();
+    }
+    if (capRemove) {
+      if (state.has_custom_chat_avatar) capRemove.classList.remove('hidden');
+      else capRemove.classList.add('hidden');
+    }
     var sVer = document.getElementById('settings-app-version');
     if (sVer) {
       var rv = (state.app_version || '').trim();
@@ -535,6 +579,99 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       })
       .catch(function () { showToast('Erro ao remover favicon', 'error'); });
   });
+
+  function parseBrandingError(r, j) {
+    var d = j && j.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) return d.map(function (x) { return x.msg || JSON.stringify(x); }).join(', ');
+    return 'Erro ' + r.status;
+  }
+
+  document.getElementById('logo-file').addEventListener('change', function () {
+    var inp = this;
+    var f = inp.files && inp.files[0];
+    if (!f) return;
+    var fd = new FormData();
+    fd.append('file', f);
+    fetch('/admin/branding/logo', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(parseBrandingError(r, j)); });
+        return r.json();
+      })
+      .then(function () {
+        state.has_custom_logo = true;
+        render();
+        showToast('Logo atualizada', 'success');
+        inp.value = '';
+        refreshBrandingOnPage();
+      })
+      .catch(function (e) {
+        showToast(e.message || 'Erro ao enviar logo', 'error');
+        inp.value = '';
+      });
+  });
+
+  document.getElementById('btn-logo-remove').addEventListener('click', function () {
+    fetch('/admin/branding/logo', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
+      .then(function () {
+        state.has_custom_logo = false;
+        render();
+        showToast('Logo padrão restaurada', 'success');
+        refreshBrandingOnPage();
+      })
+      .catch(function () { showToast('Erro ao remover logo', 'error'); });
+  });
+
+  document.getElementById('chat-avatar-file').addEventListener('change', function () {
+    var inp = this;
+    var f = inp.files && inp.files[0];
+    if (!f) return;
+    var fd = new FormData();
+    fd.append('file', f);
+    fetch('/admin/branding/chat-avatar', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(parseBrandingError(r, j)); });
+        return r.json();
+      })
+      .then(function () {
+        state.has_custom_chat_avatar = true;
+        render();
+        showToast('Avatar do chat atualizado', 'success');
+        inp.value = '';
+        refreshBrandingOnPage();
+      })
+      .catch(function (e) {
+        showToast(e.message || 'Erro ao enviar avatar', 'error');
+        inp.value = '';
+      });
+  });
+
+  document.getElementById('btn-chat-avatar-remove').addEventListener('click', function () {
+    fetch('/admin/branding/chat-avatar', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
+      .then(function () {
+        state.has_custom_chat_avatar = false;
+        render();
+        showToast('Avatar do chat: usando logo ou padrão', 'success');
+        refreshBrandingOnPage();
+      })
+      .catch(function () { showToast('Erro ao remover avatar', 'error'); });
+  });
+
+  function refreshBrandingOnPage() {
+    fetch('/branding')
+      .then(function (r) { return r.json(); })
+      .then(function (b) {
+        if (b.logo_url) {
+          document.querySelectorAll('[data-brand-logo]').forEach(function (el) { el.src = b.logo_url; });
+        }
+        if (b.chat_avatar_url) {
+          document.querySelectorAll('[data-chat-avatar]').forEach(function (el) { el.src = b.chat_avatar_url; });
+        }
+      })
+      .catch(function () {});
+  }
 
   document.querySelectorAll('#root-options .radio-opt').forEach(function (el) {
     el.addEventListener('click', function () {

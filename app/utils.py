@@ -320,3 +320,64 @@ def branding_favicon_cache_bust() -> int:
     return 0
 
 
+LOGO_STATIC_PATH = "/static/logo-urania.jpg"
+
+_LOGO_CANDIDATES = (
+    ("logo.png", "image/png"),
+    ("logo.jpg", "image/jpeg"),
+    ("logo.jpeg", "image/jpeg"),
+    ("logo.webp", "image/webp"),
+)
+_CHAT_AVATAR_CANDIDATES = (
+    ("chat-avatar.png", "image/png"),
+    ("chat-avatar.jpg", "image/jpeg"),
+    ("chat-avatar.jpeg", "image/jpeg"),
+    ("chat-avatar.webp", "image/webp"),
+)
+
+BRANDING_LOGO_FILES = tuple(n for n, _ in _LOGO_CANDIDATES)
+BRANDING_CHAT_AVATAR_FILES = tuple(n for n, _ in _CHAT_AVATAR_CANDIDATES)
+
+
+def resolve_branding_logo() -> Tuple[Optional[Path], Optional[str]]:
+    """Ficheiro logo do painel (sidebar, login), se existir."""
+    base = settings.upload_dir_path / "branding"
+    if not base.is_dir():
+        return None, None
+    for name, mime in _LOGO_CANDIDATES:
+        cand = base / name
+        if cand.is_file():
+            return cand, mime
+    return None, None
+
+
+def resolve_branding_chat_avatar_only() -> Tuple[Optional[Path], Optional[str]]:
+    """Só avatar dedicado do chat (chat-avatar.*)."""
+    base = settings.upload_dir_path / "branding"
+    if not base.is_dir():
+        return None, None
+    for name, mime in _CHAT_AVATAR_CANDIDATES:
+        cand = base / name
+        if cand.is_file():
+            return cand, mime
+    return None, None
+
+
+def resolve_effective_chat_avatar() -> Tuple[Optional[Path], Optional[str]]:
+    """Avatar no widget: chat-avatar.* ou, em falta, a mesma imagem da logo."""
+    p, m = resolve_branding_chat_avatar_only()
+    if p:
+        return p, m
+    return resolve_branding_logo()
+
+
+def branding_logo_cache_bust() -> int:
+    path, _ = resolve_branding_logo()
+    return int(path.stat().st_mtime) if path else 0
+
+
+def branding_chat_avatar_cache_bust() -> int:
+    path, _ = resolve_effective_chat_avatar()
+    return int(path.stat().st_mtime) if path else 0
+
+

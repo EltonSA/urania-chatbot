@@ -1,7 +1,7 @@
 /**
- * Aplica nome do sistema, versão e favicon vindos de GET /branding (público).
- * Requer <meta name="page-title-part" content="Título da página"> para o sufixo do document.title.
- * Elementos [data-brand-version] recebem o rótulo da versão (ex.: v1.0.0).
+ * Aplica nome do sistema, versão, favicon e imagens vindos de GET /branding (público).
+ * [data-brand-logo] = logo painel/login; [data-chat-avatar] = avatar no widget de chat.
+ * [data-brand-version] = rótulo da versão (ex.: v1.0.0 ou hash Git).
  */
 (function () {
   function formatVersion(v) {
@@ -22,6 +22,16 @@
     if (verLabel) {
       document.querySelectorAll('[data-brand-version]').forEach(function (el) {
         el.textContent = verLabel;
+      });
+    }
+    if (b.logo_url) {
+      document.querySelectorAll('[data-brand-logo]').forEach(function (el) {
+        el.src = b.logo_url;
+      });
+    }
+    if (b.chat_avatar_url) {
+      document.querySelectorAll('[data-chat-avatar]').forEach(function (el) {
+        el.src = b.chat_avatar_url;
       });
     }
     if (typeof b.display_name !== 'string') return;

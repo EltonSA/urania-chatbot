@@ -73,7 +73,11 @@
   var API = C.apiUrl || '';
   var WIDGET_URL = API ? (API.replace(/\/$/, '') + '/widget?embed=1') : '/widget?embed=1';
   var TRUSTED_ORIGIN = API ? (function () { try { return new URL(API).origin; } catch (_) { return window.location.origin; } })() : window.location.origin;
-  if (!C.avatarUrl) C.avatarUrl = API ? (API.replace(/\/$/, '') + '/static/logo-urania.jpg') : '/static/logo-urania.jpg';
+  if (!C.avatarUrl) {
+    C.avatarUrl = API
+      ? API.replace(/\/$/, '') + '/branding/chat-avatar'
+      : '/branding/chat-avatar';
+  }
 
   /* ================================================================
      SESSION STORAGE (estado abrir/minimizar)

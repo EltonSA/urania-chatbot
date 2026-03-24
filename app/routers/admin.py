@@ -20,6 +20,10 @@ from app.utils import (
     log_audit,
     branding_dir_path,
     resolve_branding_favicon,
+    resolve_branding_logo,
+    resolve_branding_chat_avatar_only,
+    BRANDING_LOGO_FILES,
+    BRANDING_CHAT_AVATAR_FILES,
 )
 from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogModel
 from app.config import settings
@@ -296,6 +300,8 @@ def get_system_settings(
         "system_display_name": get_setting(db, "system_display_name") or "",
         "default_display_name": settings.APP_NAME,
         "has_custom_favicon": fav_path is not None,
+        "has_custom_logo": resolve_branding_logo()[0] is not None,
+        "has_custom_chat_avatar": resolve_branding_chat_avatar_only()[0] is not None,
         "app_version": settings.resolved_app_version,
         "app_version_env": settings.APP_VERSION,
     }
@@ -414,6 +420,169 @@ def delete_branding_favicon(
         log_audit(
             db,
             "branding_favicon_removed",
+            "config",
+            ", ".join(removed),
+            user=current_user.get("sub"),
+            ip=request.client.host if request.client else None,
+        )
+    return {"ok": True}
+
+
+MAX_BRANDING_IMAGE_BYTES = 2 * 1024 * 1024
+
+
+def _detect_branding_image_ext(filename: str, content_type: str) -> Optional[str]:
+    fn = (filename or "").lower()
+    ct = (content_type or "").lower()
+    if fn.endswith(".png") or "png" in ct:
+        return "png"
+    if fn.endswith(".webp") or "webp" in ct:
+        return "webp"
+    if fn.endswith(".jpg") or fn.endswith(".jpeg") or "jpeg" in ct or ct == "image/jpg":
+        return "jpg"
+    return None
+
+
+def _unlink_branding_files(d, basenames: tuple):
+    for name in basenames:
+        p = d / name
+        if p.is_file():
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+
+@router.post("/branding/logo")
+async def upload_branding_logo(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Logo do painel e login (.png, .jpg, .jpeg, .webp, máx. 2 MB)."""
+    ext = _detect_branding_image_ext(file.filename, file.content_type or "")
+    if not ext:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie uma imagem .png, .jpg, .jpeg ou .webp",
+        )
+    data = await file.read()
+    if len(data) > MAX_BRANDING_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Imagem muito grande (máximo 2 MB)",
+        )
+    if len(data) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo inválido ou corrompido",
+        )
+    d = branding_dir_path()
+    _unlink_branding_files(d, BRANDING_LOGO_FILES)
+    out_name = {"png": "logo.png", "jpg": "logo.jpg", "webp": "logo.webp"}[ext]
+    (d / out_name).write_bytes(data)
+    log_audit(
+        db,
+        "branding_logo_uploaded",
+        "config",
+        out_name,
+        user=current_user.get("sub"),
+        ip=request.client.host if request.client else None,
+    )
+    return {"ok": True, "filename": out_name}
+
+
+@router.delete("/branding/logo")
+def delete_branding_logo(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove a logo personalizada (volta ao /static/logo-urania.jpg)."""
+    d = branding_dir_path()
+    removed = []
+    for name in BRANDING_LOGO_FILES:
+        p = d / name
+        if p.is_file():
+            try:
+                p.unlink()
+                removed.append(name)
+            except OSError:
+                pass
+    if removed:
+        log_audit(
+            db,
+            "branding_logo_removed",
+            "config",
+            ", ".join(removed),
+            user=current_user.get("sub"),
+            ip=request.client.host if request.client else None,
+        )
+    return {"ok": True}
+
+
+@router.post("/branding/chat-avatar")
+async def upload_branding_chat_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Avatar do assistente no chat (.png, .jpg, .jpeg, .webp, máx. 2 MB)."""
+    ext = _detect_branding_image_ext(file.filename, file.content_type or "")
+    if not ext:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie uma imagem .png, .jpg, .jpeg ou .webp",
+        )
+    data = await file.read()
+    if len(data) > MAX_BRANDING_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Imagem muito grande (máximo 2 MB)",
+        )
+    if len(data) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo inválido ou corrompido",
+        )
+    d = branding_dir_path()
+    _unlink_branding_files(d, BRANDING_CHAT_AVATAR_FILES)
+    out_name = {"png": "chat-avatar.png", "jpg": "chat-avatar.jpg", "webp": "chat-avatar.webp"}[ext]
+    (d / out_name).write_bytes(data)
+    log_audit(
+        db,
+        "branding_chat_avatar_uploaded",
+        "config",
+        out_name,
+        user=current_user.get("sub"),
+        ip=request.client.host if request.client else None,
+    )
+    return {"ok": True, "filename": out_name}
+
+
+@router.delete("/branding/chat-avatar")
+def delete_branding_chat_avatar(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove só o avatar do chat (passa a usar a logo do painel ou o estático)."""
+    d = branding_dir_path()
+    removed = []
+    for name in BRANDING_CHAT_AVATAR_FILES:
+        p = d / name
+        if p.is_file():
+            try:
+                p.unlink()
+                removed.append(name)
+            except OSError:
+                pass
+    if removed:
+        log_audit(
+            db,
+            "branding_chat_avatar_removed",
             "config",
             ", ".join(removed),
             user=current_user.get("sub"),
