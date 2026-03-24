@@ -43,6 +43,7 @@
     assistantName: 'Urânia +',
     avatarUrl: '',
     primaryColor: '#1C8B3C',
+    primaryMid: '#16a34a',
     primaryDark: '#15803d',
     zIndex: 99999,
     buttonSize: 62,
@@ -62,6 +63,8 @@
       if (d.assistantName) C.assistantName = d.assistantName;
       if (d.avatarUrl) C.avatarUrl = d.avatarUrl;
       if (d.primaryColor) C.primaryColor = d.primaryColor;
+      if (d.primaryMid) C.primaryMid = d.primaryMid;
+      if (d.primaryDark) C.primaryDark = d.primaryDark;
       if (!C.apiUrl && scriptTag.src) {
         try {
           C.apiUrl = new URL(scriptTag.src).origin;
@@ -100,24 +103,32 @@
       '#ucw-root img{display:block!important;max-width:100%!important;height:auto!important}',
       '#ucw-root button{cursor:pointer!important;appearance:none!important}',
 
-      '#ucw-root{position:fixed;bottom:24px;right:24px;z-index:' + C.zIndex + '}',
+      '#ucw-root{position:fixed;bottom:24px;right:24px;z-index:' +
+        C.zIndex +
+        ';--ucw-p:' +
+        C.primaryColor +
+        ';--ucw-pm:' +
+        C.primaryMid +
+        ';--ucw-pd:' +
+        C.primaryDark +
+        '}',
 
       /* Botão flutuante */
-      '.ucw-trigger{width:' + C.buttonSize + 'px;height:' + C.buttonSize + 'px;border-radius:50%;border:3px solid ' + C.primaryColor + '!important;cursor:pointer;',
+      '.ucw-trigger{width:' + C.buttonSize + 'px;height:' + C.buttonSize + 'px;border-radius:50%;border:3px solid var(--ucw-p)!important;cursor:pointer;',
       'background:#fff;overflow:hidden;',
       'color:#fff;display:flex;align-items:center;justify-content:center;position:relative;outline:none;padding:0!important;',
-      'box-shadow:0 6px 24px rgba(28,139,60,.4),0 2px 8px rgba(0,0,0,.1);',
+      'box-shadow:0 6px 24px color-mix(in srgb,var(--ucw-p) 38%,transparent),0 2px 8px rgba(0,0,0,.1);',
       'transition:all .3s cubic-bezier(.4,0,.2,1);animation:ucwBounce .6s cubic-bezier(.34,1.56,.64,1) both}',
-      '.ucw-trigger:hover{transform:scale(1.1);box-shadow:0 8px 32px rgba(28,139,60,.5)}',
+      '.ucw-trigger:hover{transform:scale(1.1);box-shadow:0 8px 32px color-mix(in srgb,var(--ucw-p) 45%,transparent)}',
       '.ucw-trigger:active{transform:scale(.95)}',
       '.ucw-trigger svg{width:28px;height:28px;transition:all .3s}',
       '.ucw-trigger .ucw-ic-avatar{display:block;width:100%;height:100%;border-radius:50%;overflow:hidden}',
       '.ucw-trigger .ucw-ic-avatar img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}',
       '.ucw-trigger .ucw-ic-x{display:none}',
-      '.ucw-trigger.open{background:linear-gradient(135deg,' + C.primaryColor + ' 0%,' + C.primaryDark + ' 100%)!important;border-color:transparent!important}',
+      '.ucw-trigger.open{background:linear-gradient(135deg,var(--ucw-p) 0%,var(--ucw-pd) 100%)!important;border-color:transparent!important}',
       '.ucw-trigger.open .ucw-ic-avatar{display:none}.ucw-trigger.open .ucw-ic-x{display:block}',
       '.ucw-trigger::before{content:"";position:absolute;inset:-4px;border-radius:50%;',
-      'border:2px solid ' + C.primaryColor + ';opacity:0;animation:ucwPulse 2.5s ease-out infinite}',
+      'border:2px solid var(--ucw-p);opacity:0;animation:ucwPulse 2.5s ease-out infinite}',
       '.ucw-trigger.open::before{animation:none;opacity:0}',
 
       /* Badge */
@@ -160,7 +171,7 @@
       '.ucw-trigger.hidden{opacity:0;pointer-events:none;transform:scale(0)}',
 
       /* Cabeçalho */
-      '.ucw-hdr{background:linear-gradient(135deg,' + C.primaryColor + ' 0%,#16a34a 50%,' + C.primaryDark + ' 100%)!important;',
+      '.ucw-hdr{background:linear-gradient(135deg,var(--ucw-p) 0%,var(--ucw-pm) 50%,var(--ucw-pd) 100%)!important;',
       'color:#fff!important;padding:14px 16px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;',
       'flex-shrink:0!important;min-height:62px!important;user-select:none!important;cursor:pointer!important;border:none!important}',
       '.ucw-hdr-l{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}',
@@ -444,20 +455,33 @@
   /* ================================================================
      INIT
      ================================================================ */
-  function fetchBrandingName() {
+  function fetchBranding() {
     if (!API) return;
     var cfg = window.UraniaWidgetConfig || {};
-    if (Object.prototype.hasOwnProperty.call(cfg, 'assistantName')) return;
     var url = API.replace(/\/$/, '') + '/branding';
     fetch(url)
       .then(function (r) {
         return r.json();
       })
       .then(function (b) {
-        if (!b || !b.display_name) return;
-        C.assistantName = b.display_name;
-        var nm = document.querySelector('.ucw-hdr-name');
-        if (nm) nm.textContent = b.display_name;
+        if (!b) return;
+        if (!Object.prototype.hasOwnProperty.call(cfg, 'assistantName') && b.display_name) {
+          C.assistantName = b.display_name;
+          var nm = document.querySelector('.ucw-hdr-name');
+          if (nm) nm.textContent = b.display_name;
+        }
+        var t = b.chat_theme;
+        if (t) {
+          if (!Object.prototype.hasOwnProperty.call(cfg, 'primaryColor') && t.primary) C.primaryColor = t.primary;
+          if (!Object.prototype.hasOwnProperty.call(cfg, 'primaryMid') && t.primary_mid) C.primaryMid = t.primary_mid;
+          if (!Object.prototype.hasOwnProperty.call(cfg, 'primaryDark') && t.primary_dark) C.primaryDark = t.primary_dark;
+        }
+        var root = document.getElementById('ucw-root');
+        if (root) {
+          root.style.setProperty('--ucw-p', C.primaryColor);
+          root.style.setProperty('--ucw-pm', C.primaryMid);
+          root.style.setProperty('--ucw-pd', C.primaryDark);
+        }
       })
       .catch(function () {});
   }
@@ -465,7 +489,7 @@
   function init() {
     injectCSS();
     buildDOM();
-    fetchBrandingName();
+    fetchBranding();
     bind();
     checkStatus();
 

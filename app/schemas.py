@@ -82,6 +82,25 @@ class FeedbackBody(BaseModel):
     )
 
 
+class ChatThemeSettings(BaseModel):
+    """Cores e raios do chat (/widget). Campos omitidos no PUT não são alterados."""
+
+    primary: Optional[str] = Field(None, max_length=16)
+    primary_mid: Optional[str] = Field(None, max_length=16)
+    primary_dark: Optional[str] = Field(None, max_length=16)
+    user_bg: Optional[str] = Field(None, max_length=16)
+    user_border: Optional[str] = Field(None, max_length=16)
+    user_text: Optional[str] = Field(None, max_length=16)
+    page_from: Optional[str] = Field(None, max_length=16)
+    page_via: Optional[str] = Field(None, max_length=16)
+    page_to: Optional[str] = Field(None, max_length=16)
+    chat_box_bg: Optional[str] = Field(None, max_length=80)
+    input_focus: Optional[str] = Field(None, max_length=16)
+    bubble_radius: Optional[str] = Field(None, max_length=8)
+    pdf_header_bg: Optional[str] = Field(None, max_length=16)
+    pdf_title: Optional[str] = Field(None, max_length=16)
+
+
 class SystemSettingsBody(BaseModel):
     """Schema para configurações do sistema"""
     root_behavior: Optional[str] = Field(None, pattern=r"^(widget|blank|custom)$")
@@ -89,6 +108,7 @@ class SystemSettingsBody(BaseModel):
     widget_enabled: Optional[bool] = None
     satisfaction_support_button: Optional[bool] = None
     system_display_name: Optional[str] = Field(None, max_length=120)
+    chat_theme: Optional[ChatThemeSettings] = None
 
     @validator("system_display_name")
     def strip_display_name(cls, v):

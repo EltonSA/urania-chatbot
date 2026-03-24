@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import settings
+from app.chat_theme import load_merged_chat_theme
 from app.utils import (
     get_setting,
     resolve_branding_favicon,
@@ -51,6 +52,7 @@ def public_branding(db: Session = Depends(get_db)):
         "logo_url": logo_url,
         "chat_avatar_url": chat_avatar_url,
         "version": settings.resolved_app_version,
+        "chat_theme": load_merged_chat_theme(db),
     }
 
 

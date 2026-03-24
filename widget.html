@@ -7,6 +7,7 @@
   <meta name="page-title-part" content="Chat" />
   <title>Chat</title>
   <script src="/static/apply-branding.js" defer></script>
+  <script src="/static/chat-theme.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,9 +30,35 @@
     }
   </script>
   <style>
+    :root {
+      --chat-primary: #1C8B3C;
+      --chat-primary-mid: #16a34a;
+      --chat-primary-dark: #15803d;
+      --chat-user-bg: #ffffff;
+      --chat-user-border: #e5e7eb;
+      --chat-user-text: #0f172a;
+      --chat-page-from: #ecfdf5;
+      --chat-page-via: #ffffff;
+      --chat-page-to: #f8fafc;
+      --chat-box-bg: rgba(249, 250, 251, 0.35);
+      --chat-input-focus: #22c55e;
+      --chat-bubble-radius: 20px;
+      --chat-pdf-header-bg: #f0fdf4;
+      --chat-pdf-title: #065f46;
+    }
+
     @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-6px);opacity:1}}
     @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+
+    .chat-page-bg{background:linear-gradient(to bottom right,var(--chat-page-from),var(--chat-page-via),var(--chat-page-to))}
+    .chat-header-avatar{background:linear-gradient(135deg,var(--chat-primary),var(--chat-primary-mid));box-shadow:0 10px 15px -3px rgba(0,0,0,.08)}
+    .chat-status-dot{background:var(--chat-input-focus)}
+    .chat-box-surface{background:var(--chat-box-bg)}
+    .chat-input-row:focus-within{border-color:var(--chat-input-focus)!important;box-shadow:0 4px 6px -1px rgba(0,0,0,.06),0 0 0 3px color-mix(in srgb,var(--chat-input-focus) 22%,transparent)!important}
+    .chat-send-btn{background:linear-gradient(to right,var(--chat-primary),var(--chat-primary-mid));color:#fff}
+    .chat-send-btn:hover{filter:brightness(1.06)}
+    .chat-send-btn:disabled{filter:none;opacity:.5}
 
     .messages{padding:12px 8px;overflow-y:auto;flex:1;min-height:0;scroll-behavior:smooth}
     .messages::-webkit-scrollbar{width:5px}
@@ -43,7 +70,7 @@
     .msg-row.bot{justify-content:flex-start}
     .msg-row.user{justify-content:flex-end}
 
-    .bubble{max-width:82%;padding:12px 16px;border-radius:20px;font-size:14.5px;line-height:1.6;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
+    .bubble{max-width:82%;padding:12px 16px;border-radius:var(--chat-bubble-radius);font-size:14.5px;line-height:1.6;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
     .bubble.bot .bubble-body{min-width:0}
     .bubble.bot.with-media{
       display:flex;
@@ -79,28 +106,28 @@
       box-sizing:border-box;
     }
     .bubble:hover{transform:translateY(-1px)}
-    .bubble.bot{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 10px rgba(28,139,60,.15)}
-    .bubble.user{background:#fff;border:1.5px solid #e5e7eb;border-bottom-right-radius:6px;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .bubble.bot{background:linear-gradient(135deg,var(--chat-primary),var(--chat-primary-mid));color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 10px color-mix(in srgb,var(--chat-primary) 22%,transparent)}
+    .bubble.user{background:var(--chat-user-bg);border:1.5px solid var(--chat-user-border);border-bottom-right-radius:6px;color:var(--chat-user-text);box-shadow:0 1px 4px rgba(0,0,0,.04)}
 
     .attachments{margin-top:10px}
 
     .gif-thumb{width:100%;max-width:700px;border-radius:14px;display:block;margin-top:8px;border:1px solid rgba(148,163,184,.5);cursor:zoom-in;background:#fff}
 
     .pdf-inline{margin-top:10px;width:100%;max-width:720px;background:#fff;border:1px solid rgba(148,163,184,.5);border-radius:14px;overflow:hidden}
-    .pdf-inline-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-bottom:1px solid rgba(226,232,240,.8);gap:10px}
-    .pdf-inline-title{font-size:13px;font-weight:700;color:#065f46;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+    .pdf-inline-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--chat-pdf-header-bg);border-bottom:1px solid rgba(226,232,240,.8);gap:10px}
+    .pdf-inline-title{font-size:13px;font-weight:700;color:var(--chat-pdf-title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
     .pdf-inline-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .pdf-inline-btn{border:none;background:#1C8B3C;color:#fff;padding:6px 12px;font-size:12px;border-radius:999px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-    .pdf-inline-btn.secondary{background:#fff;color:#1C8B3C;border:1px solid #1C8B3C}
+    .pdf-inline-btn{border:none;background:var(--chat-primary);color:#fff;padding:6px 12px;font-size:12px;border-radius:999px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+    .pdf-inline-btn.secondary{background:#fff;color:var(--chat-primary);border:1px solid var(--chat-primary)}
     .pdf-inline-frame{width:100%;height:420px;border:none;background:#f9fafb;display:block}
 
-    .typing-indicator{background:#1C8B3C;color:#f9fafb;padding:10px 14px;display:flex;gap:4px;align-items:center}
+    .typing-indicator{background:var(--chat-primary);color:#f9fafb;padding:10px 14px;display:flex;gap:4px;align-items:center}
     .typing-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:typing 1.4s infinite}
     .typing-dot:nth-child(2){animation-delay:.2s}
     .typing-dot:nth-child(3){animation-delay:.4s}
 
     .side-avatar{width:40px;margin-top:6px;display:flex;justify-content:center;flex-shrink:0}
-    .side-avatar-inner{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#1C8B3C,#16a34a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;overflow:hidden;object-fit:cover;box-shadow:0 2px 8px rgba(28,139,60,.15)}
+    .side-avatar-inner{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--chat-primary),var(--chat-primary-mid));display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;overflow:hidden;object-fit:cover;box-shadow:0 2px 8px color-mix(in srgb,var(--chat-primary) 20%,transparent)}
     .side-avatar-inner img{width:100%;height:100%;object-fit:cover}
 
     .resolve-card{margin-top:12px;background:#fff;border:2px solid #f3f4f6;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.03)}
@@ -110,7 +137,7 @@
     .resolve-btn{border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.08)}
     .resolve-btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,.12)}
     .resolve-btn:active{transform:translateY(0)}
-    .resolve-yes{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+    .resolve-yes{background:linear-gradient(135deg,var(--chat-primary-mid),var(--chat-primary-dark));color:#fff}
     .resolve-no{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
     .resolve-support{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff}
 
@@ -129,7 +156,7 @@
     #pdf-modal .modal-content{background:#fff}
     #pdf-modal-frame{width:100%;height:80vh;border:none;display:block;border-radius:10px;background:#f9fafb}
     #pdf-modal-actions{margin-top:10px;text-align:center;width:100%;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-    #pdf-modal-download{padding:10px 14px;background:#1C8B3C;color:white;border-radius:999px;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px rgba(28,139,60,.15)}
+    #pdf-modal-download{padding:10px 14px;background:var(--chat-primary);color:white;border-radius:999px;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px color-mix(in srgb,var(--chat-primary) 20%,transparent)}
 
     body.embed-mode{background:#fff}
     body.embed-mode .wrapper{padding:4px 6px 6px}
@@ -158,20 +185,20 @@
   </style>
 </head>
 
-<body class="h-screen w-screen m-0 p-0 bg-gradient-to-br from-brand-50/50 via-white to-gray-50 font-sans text-gray-900 flex items-stretch justify-stretch overflow-hidden antialiased">
+<body class="h-screen w-screen m-0 p-0 chat-page-bg font-sans text-gray-900 flex items-stretch justify-stretch overflow-hidden antialiased">
 
   <div class="wrapper w-full h-full bg-white flex flex-col overflow-hidden p-4 sm:p-6">
 
     <!-- Top Row -->
     <div class="top-row flex items-center justify-between gap-4 pb-4 border-b border-gray-100 mb-1">
       <div class="top-left flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/15 hover:scale-105 transition-transform">
+        <div class="w-11 h-11 rounded-2xl chat-header-avatar flex items-center justify-center text-2xl text-white overflow-hidden hover:scale-105 transition-transform">
           <img src="/branding/chat-avatar" alt="Avatar" data-chat-avatar data-brand-logo-alt class="w-full h-full object-cover" />
         </div>
         <div>
           <p class="text-xl font-bold text-gray-900 tracking-tight leading-tight" data-brand-name>Urânia +</p>
           <div class="flex items-center gap-1.5 mt-0.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+            <span class="w-1.5 h-1.5 rounded-full chat-status-dot animate-pulse"></span>
             <p class="text-[11px] text-gray-400 font-medium">Assistente Virtual</p>
           </div>
         </div>
@@ -187,15 +214,16 @@
         </div>
       </div>
 
-      <div class="chat-box flex-1 rounded-2xl border border-gray-100 p-3 sm:p-4 bg-gray-50/30 flex flex-col gap-3 min-h-0 max-h-full">
+      <div class="chat-box chat-box-surface flex-1 rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-3 min-h-0 max-h-full">
         <div id="chat-messages" class="messages"></div>
 
-        <div class="input-row flex items-stretch rounded-2xl border-2 border-gray-200 overflow-hidden bg-white shadow-sm transition-all duration-200 min-h-[52px] focus-within:border-brand-500 focus-within:shadow-md focus-within:shadow-brand-100/50 focus-within:-translate-y-px">
+        <div class="input-row chat-input-row flex items-stretch rounded-2xl border-2 border-gray-200 overflow-hidden bg-white shadow-sm transition-all duration-200 min-h-[52px] focus-within:-translate-y-px">
           <input id="chat-input" type="text"
             class="flex-1 border-none px-4 py-3.5 text-[15px] outline-none bg-transparent text-gray-900 placeholder:text-gray-400"
             placeholder="Digite sua mensagem..." />
           <button id="chat-send"
-            class="border-none px-6 sm:px-8 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-[14px] font-semibold cursor-pointer whitespace-nowrap transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed min-w-[90px] sm:min-w-[110px]">
+            type="button"
+            class="chat-send-btn border-none px-6 sm:px-8 text-[14px] font-semibold cursor-pointer whitespace-nowrap transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed min-w-[90px] sm:min-w-[110px]">
             Enviar
           </button>
         </div>

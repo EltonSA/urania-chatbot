@@ -28,6 +28,8 @@ from app.utils import (
 from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogModel
 from app.config import settings
 from app.date_range import parse_stats_date_range
+from app.chat_theme import load_merged_chat_theme, save_chat_theme_partial, reset_chat_theme
+import json
 import os
 import sys
 import subprocess
@@ -304,6 +306,7 @@ def get_system_settings(
         "has_custom_chat_avatar": resolve_branding_chat_avatar_only()[0] is not None,
         "app_version": settings.resolved_app_version,
         "app_version_env": settings.APP_VERSION,
+        "chat_theme": load_merged_chat_theme(db),
     }
 
 
@@ -338,6 +341,28 @@ def save_system_settings(
         set_setting(db, "system_display_name", new_val)
         if old != new_val:
             changes.append(f"system_display_name: {old!r} → {new_val!r}")
+
+    if body.chat_theme is not None:
+        partial = body.chat_theme.model_dump(exclude_unset=True)
+        if partial:
+            try:
+                before = json.dumps(load_merged_chat_theme(db), sort_keys=True)
+                save_chat_theme_partial(db, partial)
+                after = json.dumps(load_merged_chat_theme(db), sort_keys=True)
+                if before != after:
+                    log_audit(
+                        db,
+                        "chat_theme_updated",
+                        "config",
+                        json.dumps(partial, ensure_ascii=False)[:400],
+                        user=current_user.get("sub"),
+                        ip=request.client.host if request.client else None,
+                    )
+            except ValueError as ve:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(ve),
+                )
 
     if changes:
         log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=request.client.host if request.client else None)
@@ -588,6 +613,25 @@ def delete_branding_chat_avatar(
             user=current_user.get("sub"),
             ip=request.client.host if request.client else None,
         )
+    return {"ok": True}
+
+
+@router.post("/chat-theme/reset")
+def reset_chat_theme_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Restaura o tema do chat para as cores padrão."""
+    reset_chat_theme(db)
+    log_audit(
+        db,
+        "chat_theme_reset",
+        "config",
+        "Tema do chat restaurado ao padrão",
+        user=current_user.get("sub"),
+        ip=request.client.host if request.client else None,
+    )
     return {"ok": True}
 
 

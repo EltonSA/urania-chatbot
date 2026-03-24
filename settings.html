@@ -252,6 +252,130 @@
         </div>
       </div>
 
+      <!-- Card: Tema do chat -->
+      <div class="settings-card">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/><path d="M12 2v20"/></svg>
+          Aparência do chat
+        </div>
+        <p class="card-desc">Cores e estilo só da página <code class="bg-gray-100 px-1 rounded text-[11px]">/widget</code> e do cabeçalho/botão do widget flutuante. O painel admin não muda.</p>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <button type="button" id="btn-theme-preset-green" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Verde padrão</button>
+          <button type="button" id="btn-theme-preset-blue" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Preset azul</button>
+          <button type="button" id="btn-theme-preset-violet" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Preset violeta</button>
+          <button type="button" id="btn-chat-theme-reset" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer font-[inherit]">Restaurar padrão do servidor</button>
+        </div>
+        <p class="text-[11px] text-gray-400 mt-2">Use <strong>Salvar</strong> no topo para gravar. «Restaurar padrão do servidor» aplica imediatamente o tema inicial e recarrega os valores.</p>
+        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <div class="sm:col-span-2 text-[10px] uppercase tracking-wider text-gray-400 font-bold">Gradiente da IA (mensagens do bot, botão Enviar)</div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Cor principal (início)</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-primary" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-primary-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" placeholder="#1C8B3C" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Meio do gradiente</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-primary-mid" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-primary-mid-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Cor escura (fim do gradiente)</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-primary-dark" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-primary-dark-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Raio das bolhas de mensagem</label>
+            <select id="ct-bubble-radius" class="url-input py-2 text-sm w-full cursor-pointer font-[inherit]">
+              <option value="12px">12px (mais quadrado)</option>
+              <option value="14px">14px</option>
+              <option value="16px">16px</option>
+              <option value="18px">18px</option>
+              <option value="20px">20px (padrão)</option>
+              <option value="22px">22px</option>
+              <option value="24px">24px</option>
+              <option value="26px">26px</option>
+              <option value="28px">28px (mais redondo)</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2 text-[10px] uppercase tracking-wider text-gray-400 font-bold pt-2">Fundo da página do chat</div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Canto superior / início</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-page-from" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-page-from-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Meio</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-page-via" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-page-via-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Canto inferior / fim</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-page-to" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-page-to-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Fundo da área das mensagens (pode usar rgba)</label>
+            <input type="text" id="ct-chat-box-bg" class="url-input py-2 text-sm font-mono w-full" maxlength="80" placeholder="rgba(249, 250, 251, 0.35)" />
+          </div>
+          <div class="sm:col-span-2 text-[10px] uppercase tracking-wider text-gray-400 font-bold pt-2">Mensagem do visitante</div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Fundo da bolha</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-user-bg" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-user-bg-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Borda</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-user-border" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-user-border-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Cor do texto</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-user-text" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-user-text-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Borda ao focar no campo de texto</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-input-focus" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-input-focus-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div class="sm:col-span-2 text-[10px] uppercase tracking-wider text-gray-400 font-bold pt-2">PDF inline</div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Fundo do cabeçalho do PDF</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-pdf-header-bg" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-pdf-header-bg-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Cor do título do PDF</label>
+            <div class="flex gap-2 items-center">
+              <input type="color" id="ct-pdf-title" class="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer bg-white flex-shrink-0" />
+              <input type="text" id="ct-pdf-title-hex" class="url-input flex-1 py-2 text-sm font-mono" maxlength="7" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Card: Comportamento da URL raiz -->
       <div class="settings-card">
         <div class="card-title">
@@ -418,6 +542,41 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
   var token = localStorage.getItem('admin_token');
   if (!token) { window.location.href = '/login'; return; }
 
+  var CT_DEFAULT = {
+    primary: '#1c8b3c',
+    primary_mid: '#16a34a',
+    primary_dark: '#15803d',
+    user_bg: '#ffffff',
+    user_border: '#e5e7eb',
+    user_text: '#0f172a',
+    page_from: '#ecfdf5',
+    page_via: '#ffffff',
+    page_to: '#f8fafc',
+    chat_box_bg: 'rgba(249, 250, 251, 0.35)',
+    input_focus: '#22c55e',
+    bubble_radius: '20px',
+    pdf_header_bg: '#f0fdf4',
+    pdf_title: '#065f46'
+  };
+
+  function cloneChatTheme(d) {
+    var o = {};
+    Object.keys(CT_DEFAULT).forEach(function (k) {
+      o[k] = d && d[k] ? String(d[k]) : CT_DEFAULT[k];
+    });
+    return o;
+  }
+
+  function normalizeHex6(hex) {
+    if (!hex || typeof hex !== 'string') return '#1c8b3c';
+    var v = hex.trim();
+    if (/^#[0-9A-Fa-f]{3}$/.test(v)) {
+      return ('#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+    }
+    if (/^#[0-9A-Fa-f]{6}$/i.test(v)) return v.slice(0, 7).toLowerCase();
+    return v;
+  }
+
   var state = {
     root_behavior: 'widget',
     root_custom_url: '',
@@ -428,8 +587,11 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     has_custom_favicon: false,
     has_custom_logo: false,
     has_custom_chat_avatar: false,
-    app_version: ''
+    app_version: '',
+    chatTheme: cloneChatTheme(null)
   };
+
+  var chatThemeWired = false;
 
   loadSettings();
 
@@ -451,7 +613,9 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         state.has_custom_logo = !!d.has_custom_logo;
         state.has_custom_chat_avatar = !!d.has_custom_chat_avatar;
         state.app_version = d.app_version || '';
+        state.chatTheme = cloneChatTheme(d.chat_theme);
         render();
+        wireChatThemeIfNeeded();
       })
       .catch(function () { showToast('Erro ao carregar configurações', 'error'); });
   }
@@ -533,6 +697,147 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       var rv = (state.app_version || '').trim();
       sVer.textContent = rv ? (/^v/i.test(rv) ? rv : 'v' + rv) : '—';
     }
+    renderChatThemeFields();
+  }
+
+  function renderChatThemeFields() {
+    var t = state.chatTheme;
+    var pairs = [
+      ['primary', 'ct-primary'],
+      ['primary_mid', 'ct-primary-mid'],
+      ['primary_dark', 'ct-primary-dark'],
+      ['user_bg', 'ct-user-bg'],
+      ['user_border', 'ct-user-border'],
+      ['user_text', 'ct-user-text'],
+      ['page_from', 'ct-page-from'],
+      ['page_via', 'ct-page-via'],
+      ['page_to', 'ct-page-to'],
+      ['input_focus', 'ct-input-focus'],
+      ['pdf_header_bg', 'ct-pdf-header-bg'],
+      ['pdf_title', 'ct-pdf-title']
+    ];
+    pairs.forEach(function (p) {
+      var key = p[0];
+      var base = p[1];
+      var hex = normalizeHex6(t[key] || CT_DEFAULT[key]);
+      var hi = document.getElementById(base + '-hex');
+      var ci = document.getElementById(base);
+      if (hi) hi.value = t[key] || '';
+      if (ci && /^#[0-9A-Fa-f]{6}$/i.test(hex)) ci.value = hex;
+    });
+    var bg = document.getElementById('ct-chat-box-bg');
+    if (bg) bg.value = t.chat_box_bg || '';
+    var br = document.getElementById('ct-bubble-radius');
+    if (br) br.value = t.bubble_radius || '20px';
+  }
+
+  function wireChatThemeIfNeeded() {
+    if (chatThemeWired) return;
+    chatThemeWired = true;
+    var pairs = [
+      ['primary', 'ct-primary'],
+      ['primary_mid', 'ct-primary-mid'],
+      ['primary_dark', 'ct-primary-dark'],
+      ['user_bg', 'ct-user-bg'],
+      ['user_border', 'ct-user-border'],
+      ['user_text', 'ct-user-text'],
+      ['page_from', 'ct-page-from'],
+      ['page_via', 'ct-page-via'],
+      ['page_to', 'ct-page-to'],
+      ['input_focus', 'ct-input-focus'],
+      ['pdf_header_bg', 'ct-pdf-header-bg'],
+      ['pdf_title', 'ct-pdf-title']
+    ];
+    pairs.forEach(function (p) {
+      var key = p[0];
+      var base = p[1];
+      var c = document.getElementById(base);
+      var h = document.getElementById(base + '-hex');
+      if (!c || !h) return;
+      c.addEventListener('input', function () {
+        h.value = c.value;
+        state.chatTheme[key] = c.value.toLowerCase();
+      });
+      h.addEventListener('input', function () {
+        var v = h.value.trim();
+        var n = normalizeHex6(v);
+        if (/^#[0-9A-Fa-f]{6}$/i.test(n)) {
+          c.value = n;
+          state.chatTheme[key] = n;
+        } else {
+          state.chatTheme[key] = v;
+        }
+      });
+    });
+    var bg = document.getElementById('ct-chat-box-bg');
+    if (bg) {
+      bg.addEventListener('input', function () {
+        state.chatTheme.chat_box_bg = this.value;
+      });
+    }
+    var br = document.getElementById('ct-bubble-radius');
+    if (br) {
+      br.addEventListener('change', function () {
+        state.chatTheme.bubble_radius = this.value;
+      });
+    }
+
+    document.getElementById('btn-theme-preset-green').addEventListener('click', function () {
+      state.chatTheme = cloneChatTheme(null);
+      render();
+    });
+    document.getElementById('btn-theme-preset-blue').addEventListener('click', function () {
+      state.chatTheme = cloneChatTheme({
+        primary: '#2563eb',
+        primary_mid: '#3b82f6',
+        primary_dark: '#1d4ed8',
+        page_from: '#eff6ff',
+        page_via: '#ffffff',
+        page_to: '#f8fafc',
+        input_focus: '#60a5fa',
+        pdf_header_bg: '#eff6ff',
+        pdf_title: '#1e40af',
+        user_bg: '#ffffff',
+        user_border: '#e5e7eb',
+        user_text: '#0f172a',
+        chat_box_bg: 'rgba(239, 246, 255, 0.45)',
+        bubble_radius: '20px'
+      });
+      render();
+    });
+    document.getElementById('btn-theme-preset-violet').addEventListener('click', function () {
+      state.chatTheme = cloneChatTheme({
+        primary: '#7c3aed',
+        primary_mid: '#8b5cf6',
+        primary_dark: '#5b21b6',
+        page_from: '#f5f3ff',
+        page_via: '#ffffff',
+        page_to: '#faf5ff',
+        input_focus: '#a78bfa',
+        pdf_header_bg: '#ede9fe',
+        pdf_title: '#5b21b6',
+        user_bg: '#ffffff',
+        user_border: '#e5e7eb',
+        user_text: '#0f172a',
+        chat_box_bg: 'rgba(245, 243, 255, 0.5)',
+        bubble_radius: '20px'
+      });
+      render();
+    });
+    document.getElementById('btn-chat-theme-reset').addEventListener('click', function () {
+      fetch('/admin/chat-theme/reset', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+        .then(function (r) {
+          if (!r.ok) throw r;
+          return r.json();
+        })
+        .then(function () {
+          showToast('Tema do chat restaurado no servidor', 'success');
+          loadSettings();
+        })
+        .catch(function () {
+          showToast('Erro ao restaurar tema', 'error');
+        });
+    });
   }
 
   document.getElementById('system-display-name').addEventListener('input', function () {
@@ -707,7 +1012,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         root_custom_url: state.root_custom_url,
         widget_enabled: state.widget_enabled,
         satisfaction_support_button: state.satisfaction_support_button,
-        system_display_name: state.system_display_name.trim()
+        system_display_name: state.system_display_name.trim(),
+        chat_theme: state.chatTheme
       })
     })
     .then(function (r) { if (!r.ok) throw r; return r.json(); })
