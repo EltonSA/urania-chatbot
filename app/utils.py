@@ -53,6 +53,8 @@ def build_file_url(file: FileModel) -> str:
         return f"/files/pdf/{file.id}"
     if file.file_type == "gif":
         return f"/files/gif/{file.id}"
+    if file.file_type == "image":
+        return f"/files/image/{file.id}"
     return ""
 
 
@@ -146,6 +148,7 @@ def search_relevant_files(db: Session, query: str, limit: int = 8) -> List[FileM
         pattern = f"%{w}%"
         conditions.append(FileModel.title.ilike(pattern))
         conditions.append(FileModel.tags.ilike(pattern))
+        conditions.append(FileModel.description.ilike(pattern))
 
     files = (
         query_db
@@ -165,39 +168,65 @@ def build_system_prompt(files: List[FileModel], custom_prompt: str = "") -> str:
     """Constrói prompt do sistema para o OpenAI"""
     files_description = []
     for f in files:
+        desc = (f.description or "").strip()
+        desc_part = f', descrição: "{desc}"' if desc else ""
+        group_part = f", grupo: {f.group_id}" if f.group_id else ""
         files_description.append(
-            f'- ID: {f.id}, tipo: {f.file_type}, título: "{f.title or f.original_name}", tags: {f.tags or ""}'
+            f'- ID: {f.id}, tipo: {f.file_type}, título: "{f.title or f.original_name}", tags: {f.tags or ""}{desc_part}{group_part}'
         )
     files_block = "\n".join(files_description) if files_description else "Nenhum arquivo relevante encontrado."
 
     base_rules = f"""
 Você é um assistente de suporte que atende clientes no site.
 
-Você tem acesso a materiais (PDFs e GIFs) que podem ser enviados ao usuário.
-Cada material tem: ID, tipo (pdf/gif), título, tags.
+Você tem acesso a materiais (PDF, GIF animado e imagens PNG/JPG/WebP) que podem ser enviados ao usuário.
+Cada material tem: ID, tipo (pdf/gif/image), título, tags e opcionalmente uma descrição (use a descrição para contextualizar e para redigir a resposta em "reply" quando fizer sentido).
+Vários itens podem compartilhar o mesmo "grupo" (apenas imagens estáticas e GIFs; PDF não entra em grupo): cada item do grupo tem seu próprio ID e sua própria descrição no cadastro.
 
 MATERIAIS DISPONÍVEIS:
 {files_block}
 
-Sua resposta DEVE ser SEMPRE um JSON válido, exatamente no formato:
+Sua resposta DEVE ser SEMPRE um JSON válido.
+
+Quando for enviar uma ou mais imagens (passo a passo ou grupo), use OBRIGATORIAMENTE "reply_steps". O cliente exibe na ordem: texto do passo → pausa → imagem daquele passo → pausa → próximo passo (e assim por diante).
+
+{{
+  "reply": "opcional: só uma saudação ou contexto muito curto; NÃO coloque aqui o passo a passo nem antecipe imagens",
+  "reply_steps": [
+    {{
+      "text": "Passo 1 — explicação COM SUAS PRÓPRIAS PALAVRAS (descrição do cadastro = só roteiro factual, não copiar literalmente).",
+      "attachments": [ {{ "type": "image", "file_id": ID_DA_IMAGEM_1 }} ]
+    }},
+    {{
+      "text": "Passo 2 — próxima explicação com suas palavras.",
+      "attachments": [ {{ "type": "image", "file_id": ID_DA_IMAGEM_2 }} ]
+    }}
+  ],
+  "attachments": [],
+  "should_ask_resolution": true ou false
+}}
+
+Regras OBRIGATÓRIAS para reply_steps:
+- Cada elemento do array reply_steps = EXATAMENTE UM objeto em "attachments" (uma única imagem/PDF/GIF por passo). NUNCA coloque dois ou mais file_id no mesmo passo.
+- NUNCA agrupe todas as imagens no primeiro passo. A ordem correta é: passo1 com texto1 + só imagem1, depois passo2 com texto2 + só imagem2, etc.
+- Itens do mesmo grupo (imagem ou GIF): cada um tem seu próprio ID — use um reply_steps por item, na ordem (1, 2, 3…), cada "text" alinhado à descrição daquele ID; em "attachments" use "type": "image" ou "gif" conforme o material.
+- O campo "reply" não substitui os textos dos passos; não use "reply" para explicar passos que têm imagens — use o "text" de cada passo.
+
+Quando for apenas um PDF, um GIF ou um caso simples sem sequência, pode usar o formato clássico (sem reply_steps):
 
 {{
   "reply": "texto da resposta ao usuário",
-  "attachments": [
-    {{
-      "type": "gif" ou "pdf",
-      "file_id": ID_DO_ARQUIVO,
-      "name": "nome legível (opcional)"
-    }}
-  ],
+  "attachments": [ {{ "type": "gif" ou "pdf" ou "image", "file_id": ID, "name": "opcional" }} ],
+  "reply_steps": [],
   "should_ask_resolution": true ou false
 }}
 
 Regras IMPORTANTES:
-- Se não precisar enviar nada, use "attachments": [].
+- Se usar "reply_steps", deixe "attachments" como lista vazia [] na raiz.
+- Se não precisar enviar mídia, use "attachments": [] e "reply_steps": [].
 - Só use IDs que estejam na lista de materiais disponíveis.
 - Use GIFs quando ajudarem a explicar (passo a passo visual).
-- Use PDFs quando forem materiais mais completos.
+- Use imagens (type "image") para ilustrações estáticas; use PDFs para materiais mais longos.
 - NUNCA saia do formato JSON.
 
 Regra do should_ask_resolution:
@@ -234,13 +263,30 @@ def ensure_chat_started_on_first_user_message(db: Session, session_id: str):
         log_event(db, session_id, "chat_started")
 
 
+def expand_attachment_files(db: Session, file: FileModel) -> List[FileModel]:
+    """Uma entrada de anexo vira todos os itens do mesmo grupo (imagem ou GIF), se houver group_id."""
+    if file.group_id and file.file_type in ("image", "gif"):
+        return (
+            db.query(FileModel)
+            .filter(
+                FileModel.group_id == file.group_id,
+                FileModel.file_type.in_(("image", "gif")),
+            )
+            .order_by(FileModel.id.asc())
+            .all()
+        )
+    return [file]
+
+
 def ensure_upload_dirs():
     """Garante que os diretórios de upload existam"""
     upload_dir = settings.upload_dir_path
     pdf_dir = upload_dir / "pdfs"
     gif_dir = upload_dir / "gifs"
+    image_dir = upload_dir / "images"
     pdf_dir.mkdir(parents=True, exist_ok=True)
     gif_dir.mkdir(parents=True, exist_ok=True)
-    return str(pdf_dir), str(gif_dir)
+    image_dir.mkdir(parents=True, exist_ok=True)
+    return str(pdf_dir), str(gif_dir), str(image_dir)
 
 

@@ -42,6 +42,40 @@
     .msg-row.user{justify-content:flex-end}
 
     .bubble{max-width:82%;padding:12px 16px;border-radius:20px;font-size:14.5px;line-height:1.6;word-wrap:break-word;white-space:pre-wrap;transition:transform .15s ease}
+    .bubble.bot .bubble-body{min-width:0}
+    .bubble.bot.with-media{
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
+      width:fit-content;
+      max-width:82%;
+      min-width:0;
+    }
+    .bubble.bot.with-media .bubble-body{
+      width:100%;
+      max-width:100%;
+      box-sizing:border-box;
+      overflow-wrap:break-word;
+      word-break:break-word;
+      hyphens:auto;
+    }
+    .bubble.bot.with-media .attachments{
+      align-self:flex-start;
+      width:auto;
+      max-width:min(82vw,720px);
+    }
+    .bubble.bot.with-media .gif-thumb{
+      width:auto;
+      max-width:100%;
+      height:auto;
+      display:block;
+      box-sizing:border-box;
+    }
+    .bubble.bot.with-media .pdf-inline{
+      width:auto;
+      max-width:100%;
+      box-sizing:border-box;
+    }
     .bubble:hover{transform:translateY(-1px)}
     .bubble.bot{background:linear-gradient(135deg,#1C8B3C,#16a34a);color:#fff;border-bottom-left-radius:6px;box-shadow:0 2px 10px rgba(28,139,60,.15)}
     .bubble.user{background:#fff;border:1.5px solid #e5e7eb;border-bottom-right-radius:6px;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.04)}
@@ -68,6 +102,7 @@
     .side-avatar-inner img{width:100%;height:100%;object-fit:cover}
 
     .resolve-card{margin-top:12px;background:#fff;border:2px solid #f3f4f6;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.03)}
+    .resolve-card.resolve-card-done{flex-direction:column;align-items:stretch;justify-content:flex-start;border-color:#dcfce7;background:#f0fdf4}
     .resolve-text{font-size:13px;color:#0f172a;font-weight:600}
     .resolve-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
     .resolve-btn{border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 4px rgba(0,0,0,.08)}
@@ -75,6 +110,7 @@
     .resolve-btn:active{transform:translateY(0)}
     .resolve-yes{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
     .resolve-no{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
+    .resolve-support{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff}
 
     .whatsapp-support-btn{display:inline-block;margin-top:10px;padding:8px 14px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;transition:all .2s ease;box-shadow:0 2px 6px rgba(37,211,102,.25)}
     .whatsapp-support-btn:hover{background:#20BA5A;transform:translateY(-1px);box-shadow:0 4px 10px rgba(37,211,102,.3)}
@@ -102,6 +138,7 @@
     body.embed-mode .messages{padding:6px 4px}
     body.embed-mode .msg-row{margin-bottom:8px}
     body.embed-mode .bubble{font-size:14px;padding:9px 13px;border-radius:16px;max-width:90%}
+    body.embed-mode .bubble.bot.with-media{max-width:90%}
     body.embed-mode .input-row{min-height:44px;border-radius:12px}
     body.embed-mode .input-row input{padding:9px 14px;font-size:14px}
     body.embed-mode .input-row button{padding:0 18px;font-size:14px;min-width:72px}
@@ -127,7 +164,7 @@
     <div class="top-row flex items-center justify-between gap-4 pb-4 border-b border-gray-100 mb-1">
       <div class="top-left flex items-center gap-3">
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center text-2xl text-white overflow-hidden shadow-lg shadow-brand-600/15 hover:scale-105 transition-transform">
-          <img src="/static/logo-uraia.jpg" alt="Avatar" class="w-full h-full object-cover" />
+          <img src="/static/logo-urania.jpg" alt="Avatar" class="w-full h-full object-cover" />
         </div>
         <div>
           <p class="text-xl font-bold text-gray-900 tracking-tight leading-tight">Urânia +</p>
@@ -144,7 +181,7 @@
     <div class="chat-area mt-3 flex gap-3 items-start flex-1 min-h-0">
       <div class="side-avatar">
         <div class="side-avatar-inner">
-          <img src="/static/logo-uraia.jpg" alt="Avatar" />
+          <img src="/static/logo-urania.jpg" alt="Avatar" />
         </div>
       </div>
 
@@ -225,7 +262,13 @@
         _isRestoring = true;
         messageLog = saved;
         chatHistory = hist || [];
-        saved.forEach(m => addMessage(m.who, m.text, m.attachments || [], m.needsHumanSupport || false, false));
+        saved.forEach(function(m){
+          if(m.sequential){
+            replayBotSequential(m);
+          } else {
+            addMessage(m.who, m.text, m.attachments || [], m.needsHumanSupport || false, false);
+          }
+        });
         _isRestoring = false;
         return true;
       }
@@ -283,6 +326,93 @@
   pdfModalClose.addEventListener("click", closePdfModal);
   pdfModal.addEventListener("click", (e)=>{ if(e.target === pdfModal) closePdfModal(); });
 
+  function messagesBubbleWidthCap(){
+    const messagesEl = document.getElementById("chat-messages");
+    const mw = messagesEl ? messagesEl.clientWidth : 560;
+    const embed = document.body.classList.contains("embed-mode");
+    return mw * (embed ? 0.9 : 0.82);
+  }
+
+  /** Estima maxWidth antes da mídia existir no DOM (digitação + passos sequenciais). */
+  function preSyncBubbleWidthFromAttachments(bubble, attachments){
+    if(!bubble || !attachments || !attachments.length) return;
+    const cap = messagesBubbleWidthCap();
+    const pad = 36;
+    const mw = (document.getElementById("chat-messages") || { clientWidth: 560 }).clientWidth;
+    const embed = document.body.classList.contains("embed-mode");
+    const attCap = embed ? Math.max(120, mw - 40) : Math.min(mw * 0.82, 720);
+
+    const firstImg = attachments.find(function(a){ return a.type === "gif" || a.type === "image"; });
+    if(firstImg){
+      const im = new Image();
+      im.onload = function(){
+        const nw = im.naturalWidth || 0;
+        const displayW = nw > 0 ? Math.min(nw, attCap) : attCap;
+        if(displayW < 24) return;
+        bubble.style.maxWidth = Math.min(displayW + pad, cap) + "px";
+        scrollToBottom();
+      };
+      im.onerror = function(){};
+      im.src = firstImg.url;
+      return;
+    }
+    if(attachments.some(function(a){ return a.type === "pdf"; })){
+      const displayW = Math.min(720, attCap);
+      bubble.style.maxWidth = Math.min(displayW + pad, cap) + "px";
+    }
+  }
+
+  /** Encolhe a bolha do bot para a largura da mídia, com quebra de linha no texto. */
+  function syncBubbleWidthToMedia(bubble){
+    if(!bubble || !bubble.classList.contains("with-media")) return;
+    const att = bubble.querySelector(".attachments");
+    if(!att) return;
+
+    let measureRetries = 0;
+    const run = function(){
+      const cap = messagesBubbleWidthCap();
+      let w = 0;
+      att.querySelectorAll("img.gif-thumb").forEach(function(img){
+        const rw = img.getBoundingClientRect().width;
+        if(rw > w) w = rw;
+      });
+      const pdf = att.querySelector(".pdf-inline");
+      if(pdf){
+        const rw = pdf.getBoundingClientRect().width;
+        if(rw > w) w = rw;
+      }
+      if(w < 48){
+        if(measureRetries < 12){
+          measureRetries++;
+          requestAnimationFrame(function(){ requestAnimationFrame(run); });
+        }
+        return;
+      }
+      const pad = 36;
+      bubble.style.maxWidth = Math.min(w + pad, cap) + "px";
+      scrollToBottom();
+    };
+
+    const imgs = att.querySelectorAll("img.gif-thumb");
+    let pending = 0;
+    imgs.forEach(function(img){
+      if(!img.complete){
+        pending++;
+        img.addEventListener("load", function onImg(){
+          img.removeEventListener("load", onImg);
+          pending--;
+          if(pending <= 0) requestAnimationFrame(function(){ requestAnimationFrame(run); });
+        });
+      }
+    });
+    if(pending === 0) requestAnimationFrame(function(){ requestAnimationFrame(run); });
+
+    const iframe = att.querySelector("iframe.pdf-inline-frame");
+    if(iframe){
+      iframe.addEventListener("load", function(){ setTimeout(run, 200); }, { once: true });
+    }
+  }
+
   function renderAttachments(containerEl, attachments=[]){
     if(!attachments || attachments.length === 0) return;
 
@@ -290,10 +420,10 @@
     attDiv.className = "attachments";
 
     attachments.forEach(att=>{
-      if(att.type === "gif"){
+      if(att.type === "gif" || att.type === "image"){
         const img = document.createElement("img");
         img.src = att.url;
-        img.alt = att.name || "GIF";
+        img.alt = att.name || (att.type === "image" ? "Imagem" : "GIF");
         img.className = "gif-thumb";
         img.addEventListener("click", ()=>openGifModal(att.url, att.name));
         attDiv.appendChild(img);
@@ -342,6 +472,9 @@
     });
 
     containerEl.appendChild(attDiv);
+    if(containerEl.classList && containerEl.classList.contains("with-media")){
+      syncBubbleWidthToMedia(containerEl);
+    }
   }
 
   function showTypingIndicator(){
@@ -354,7 +487,7 @@
     const avatarInner = document.createElement("div");
     avatarInner.className = "side-avatar-inner";
     const avatarImg = document.createElement("img");
-    avatarImg.src = "/static/logo-uraia.jpg";
+    avatarImg.src = "/static/logo-urania.jpg";
     avatarImg.alt = "Avatar";
     avatarInner.appendChild(avatarImg);
     avatarDiv.appendChild(avatarInner);
@@ -389,6 +522,118 @@
     }, speed);
   }
 
+  function sleep(ms){
+    return new Promise(function(resolve){ setTimeout(resolve, ms); });
+  }
+
+  function typeTextPromise(element, text, speed){
+    return new Promise(function(resolve){
+      if(!text){
+        resolve();
+        return;
+      }
+      typeText(element, text, speed || 30, resolve);
+    });
+  }
+
+  function createBotRowWithBubble(){
+    const row = document.createElement("div");
+    row.className = "msg-row bot";
+    const avatarDiv = document.createElement("div");
+    avatarDiv.className = "side-avatar";
+    const avatarInner = document.createElement("div");
+    avatarInner.className = "side-avatar-inner";
+    const avatarImg = document.createElement("img");
+    avatarImg.src = "/static/logo-urania.jpg";
+    avatarImg.alt = "Avatar";
+    avatarInner.appendChild(avatarImg);
+    avatarDiv.appendChild(avatarInner);
+    row.appendChild(avatarDiv);
+    const bubble = document.createElement("div");
+    bubble.className = "bubble bot";
+    const body = document.createElement("div");
+    body.className = "bubble-body";
+    bubble.appendChild(body);
+    row.appendChild(bubble);
+    chatMessages.appendChild(row);
+    scrollToBottom();
+    return { row: row, bubble: bubble, body: body };
+  }
+
+  /** Resposta em sequência: texto → 2s → mídia → 2s → próximo passo (reply_steps). */
+  const SEQUENTIAL_GAP_MS = 2000;
+
+  async function playBotSequentialResponse(data){
+    const opening = (data.reply || "").trim();
+    const steps = data.reply_steps || [];
+    const needsHuman = !!data.needs_human_support;
+    let lastRow = null;
+
+    if(opening){
+      const c = createBotRowWithBubble();
+      await typeTextPromise(c.body, opening, 30);
+      if(needsHuman && steps.length === 0) addWhatsAppButton(c.bubble);
+      lastRow = c.row;
+      scrollToBottom();
+      if(steps.length > 0){
+        await sleep(SEQUENTIAL_GAP_MS);
+      }
+    }
+
+    for(let i = 0; i < steps.length; i++){
+      const st = steps[i] || {};
+      const txt = (st.text || "").trim();
+      const atts = st.attachments || [];
+      const c = createBotRowWithBubble();
+      if(atts.length > 0){
+        c.bubble.classList.add("with-media");
+        preSyncBubbleWidthFromAttachments(c.bubble, atts);
+      }
+      await typeTextPromise(c.body, txt, 30);
+      if(atts.length > 0){
+        await sleep(SEQUENTIAL_GAP_MS);
+        renderAttachments(c.bubble, atts);
+      }
+      const isLast = i === steps.length - 1;
+      if(needsHuman && isLast) addWhatsAppButton(c.bubble);
+      lastRow = c.row;
+      scrollToBottom();
+      if(!isLast){
+        await sleep(SEQUENTIAL_GAP_MS);
+      }
+    }
+
+    if(!_isRestoring){
+      messageLog.push({
+        who: "bot",
+        sequential: {
+          opening: opening,
+          steps: steps.map(function(s){
+            return { text: (s && s.text) || "", attachments: (s && s.attachments) || [] };
+          })
+        },
+        needsHumanSupport: needsHuman
+      });
+      saveChat();
+      notifyParent("ucw-new-message");
+    }
+    return lastRow;
+  }
+
+  function replayBotSequential(msg){
+    const seq = msg.sequential || {};
+    const opening = (seq.opening || "").trim();
+    const steps = seq.steps || [];
+    const nh = !!msg.needsHumanSupport;
+    if(opening){
+      addMessage("bot", opening, [], nh && steps.length === 0, false);
+    }
+    steps.forEach(function(st, idx){
+      const isLast = idx === steps.length - 1;
+      addMessage("bot", (st && st.text) || "", (st && st.attachments) || [], nh && isLast, false);
+    });
+  }
+
   function addMessage(who, text, attachments=[], needsHumanSupport=false, animateTyping=false){
     const row = document.createElement("div");
     row.className = "msg-row " + who;
@@ -399,7 +644,7 @@
       const avatarInner = document.createElement("div");
       avatarInner.className = "side-avatar-inner";
       const avatarImg = document.createElement("img");
-      avatarImg.src = "/static/logo-uraia.jpg";
+      avatarImg.src = "/static/logo-urania.jpg";
       avatarImg.alt = "Avatar";
       avatarInner.appendChild(avatarImg);
       avatarDiv.appendChild(avatarInner);
@@ -408,21 +653,34 @@
 
     const bubble = document.createElement("div");
     bubble.className = "bubble " + who;
-    
-    if(animateTyping && who === "bot" && text){
-      bubble.textContent = "";
-      typeText(bubble, text, 30, () => {
-        renderAttachments(bubble, attachments);
-        if(needsHumanSupport){
-          addWhatsAppButton(bubble);
+
+    if(who === "bot"){
+      const bubbleBody = document.createElement("div");
+      bubbleBody.className = "bubble-body";
+      bubble.appendChild(bubbleBody);
+      const hasAtt = attachments && attachments.length > 0;
+      if(hasAtt){
+        bubble.classList.add("with-media");
+        preSyncBubbleWidthFromAttachments(bubble, attachments);
+      }
+
+      if(animateTyping){
+        if(text){
+          typeText(bubbleBody, text, 30, () => {
+            renderAttachments(bubble, attachments);
+            if(needsHumanSupport) addWhatsAppButton(bubble);
+          });
+        } else {
+          renderAttachments(bubble, attachments);
+          if(needsHumanSupport) addWhatsAppButton(bubble);
         }
-      });
+      } else {
+        bubbleBody.textContent = text || "";
+        renderAttachments(bubble, attachments);
+        if(needsHumanSupport) addWhatsAppButton(bubble);
+      }
     } else {
       bubble.textContent = text || "";
-      renderAttachments(bubble, attachments);
-      if(needsHumanSupport){
-        addWhatsAppButton(bubble);
-      }
     }
 
     row.appendChild(bubble);
@@ -439,6 +697,7 @@
   }
 
   let whatsappNumber = "";
+  let satisfactionSupportEnabled = true;
 
   function addWhatsAppButton(container){
     if(!whatsappNumber) return;
@@ -450,12 +709,15 @@
     container.appendChild(whatsappBtn);
   }
 
-  async function sendFeedback(resolved){
+  async function sendFeedback(resolved, action){
     const sessionId = getOrCreateSessionId();
+    const payload = { session_id: sessionId };
+    if(action === "support") payload.action = "support";
+    else payload.resolved = !!resolved;
     const res = await fetch("/chat/feedback", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ session_id: sessionId, resolved: !!resolved })
+      body: JSON.stringify(payload)
     });
     if(!res.ok){
       const t = await res.text().catch(()=> "");
@@ -489,24 +751,37 @@
     noBtn.className = "resolve-btn resolve-no";
     noBtn.textContent = "Não";
 
+    let supportBtn = null;
+    if(satisfactionSupportEnabled){
+      supportBtn = document.createElement("button");
+      supportBtn.className = "resolve-btn resolve-support";
+      supportBtn.textContent = "Solicitar suporte";
+      supportBtn.setAttribute("type", "button");
+    }
+
     actions.appendChild(yesBtn);
     actions.appendChild(noBtn);
+    if(supportBtn) actions.appendChild(supportBtn);
 
     card.appendChild(left);
     card.appendChild(actions);
 
-    const lock = ()=>{ yesBtn.disabled = true; noBtn.disabled = true; };
+    const lock = ()=>{
+      yesBtn.disabled = true;
+      noBtn.disabled = true;
+      if(supportBtn) supportBtn.disabled = true;
+    };
 
     yesBtn.addEventListener("click", async ()=>{
       lock();
       try{
         await sendFeedback(true);
-        card.innerHTML = '<div class="resolve-text">Obrigado! Registramos sua resposta.</div>';
-        setTimeout(()=>resolveRow.remove(), 1500);
+        card.classList.add("resolve-card-done");
+        card.innerHTML = '<div class="resolve-text">Obrigado pela sua resposta! Registramos que você conseguiu resolver.</div>';
+        scrollToBottom();
       }catch(e){
         console.error(e);
         card.innerHTML = '<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>';
-        setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
 
@@ -514,14 +789,52 @@
       lock();
       try{
         await sendFeedback(false);
-        card.innerHTML = '<div class="resolve-text">Obrigado! Vamos melhorar para a próxima.</div>';
-        setTimeout(()=>resolveRow.remove(), 1700);
+        card.classList.add("resolve-card-done");
+        card.innerHTML = '<div class="resolve-text">Obrigado pela sua resposta! Vamos usar seu feedback para melhorar o atendimento.</div>';
+        scrollToBottom();
       }catch(e){
         console.error(e);
         card.innerHTML = '<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>';
-        setTimeout(()=>resolveRow.remove(), 2200);
       }
     });
+
+    if(supportBtn){
+      supportBtn.addEventListener("click", async ()=>{
+        lock();
+        try{
+          await sendFeedback(false, "support");
+          card.classList.add("resolve-card-done");
+          const wrap = document.createElement("div");
+          wrap.className = "resolve-text";
+          wrap.style.maxWidth = "100%";
+          const thanks = document.createElement("div");
+          thanks.textContent = "Obrigado pela sua resposta!";
+          const t = document.createElement("div");
+          t.style.marginTop = "6px";
+          t.textContent = whatsappNumber
+            ? "Registramos seu pedido de suporte. Você pode falar conosco pelo WhatsApp."
+            : "Registramos seu pedido de suporte. Nossa equipe dará continuidade ao seu atendimento.";
+          wrap.appendChild(thanks);
+          wrap.appendChild(t);
+          if(whatsappNumber){
+            const wa = document.createElement("a");
+            wa.href = "https://wa.me/" + whatsappNumber;
+            wa.target = "_blank";
+            wa.rel = "noopener noreferrer";
+            wa.className = "whatsapp-support-btn";
+            wa.style.marginTop = "10px";
+            wa.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px;margin-top:-1px"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Abrir WhatsApp';
+            wrap.appendChild(wa);
+          }
+          card.innerHTML = "";
+          card.appendChild(wrap);
+          scrollToBottom();
+        }catch(e){
+          console.error(e);
+          card.innerHTML = '<div class="resolve-text" style="color:#b91c1c;">Erro ao enviar. Tente novamente.</div>';
+        }
+      });
+    }
 
     resolveRow.appendChild(card);
     afterRowEl.parentNode.insertBefore(resolveRow, afterRowEl.nextSibling);
@@ -569,22 +882,36 @@
       
       removeTypingIndicator();
 
-      const botBubble = addMessage(
-        "bot", 
-        data.reply || "", 
-        data.attachments || [],
-        data.needs_human_support || false,
-        true
-      );
-      chatHistory.push({ role:"assistant", content: data.reply || "" });
+      let botRowForResolve = null;
 
-      if (data.should_ask_resolution === true) {
-        const botRow = botBubble.closest(".msg-row");
-        if(botRow){
-          setTimeout(() => {
-            addResolveCard(botRow);
-          }, (data.reply || "").length * 30 + 500);
-        }
+      if(data.reply_steps && data.reply_steps.length > 0){
+        botRowForResolve = await playBotSequentialResponse(data);
+        const histParts = [];
+        if((data.reply || "").trim()) histParts.push((data.reply || "").trim());
+        data.reply_steps.forEach(function(s){
+          if(s && (s.text || "").trim()) histParts.push((s.text || "").trim());
+        });
+        chatHistory.push({ role:"assistant", content: histParts.join("\n\n") });
+      } else {
+        const botBubble = addMessage(
+          "bot",
+          data.reply || "",
+          data.attachments || [],
+          data.needs_human_support || false,
+          true
+        );
+        botRowForResolve = botBubble.closest(".msg-row");
+        chatHistory.push({ role:"assistant", content: data.reply || "" });
+      }
+
+      if (data.should_ask_resolution === true && botRowForResolve) {
+        await checkChatStatus();
+        const delay = (data.reply_steps && data.reply_steps.length)
+          ? 800
+          : ((data.reply || "").length * 30 + 500);
+        setTimeout(function(){
+          addResolveCard(botRowForResolve);
+        }, delay);
       }
 
       chatStatus.textContent = "Pronto para outra pergunta.";
@@ -630,6 +957,7 @@
       if(!res.ok) throw new Error("Erro ao verificar status");
       const data = await res.json();
       if(data.whatsapp_number) whatsappNumber = data.whatsapp_number;
+      satisfactionSupportEnabled = data.satisfaction_support_enabled !== false;
       return data;
     }catch(err){
       console.error("Erro ao verificar status:", err);

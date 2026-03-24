@@ -59,6 +59,10 @@
     .resource-header{display:flex;flex-direction:column;gap:4px}
     .resource-type-pill{font-size:10px;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,#eff6ff,#e0e7ff);color:#3730a3;border:1px solid #c7d2fe;text-transform:uppercase;font-weight:700;letter-spacing:.8px;align-self:flex-start}
     .resource-type-pill.pdf{background:linear-gradient(135deg,#fef2f2,#fee2e2);color:#991b1b;border-color:#fecaca}
+    .resource-icon.image{background:linear-gradient(135deg,#0891b2,#0e7490);box-shadow:0 3px 10px rgba(8,145,178,.2)}
+    .resource-type-pill.image{background:linear-gradient(135deg,#ecfeff,#cffafe);color:#155e75;border-color:#a5f3fc}
+    .resource-desc{font-size:12px;color:#4b5563;line-height:1.45;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;max-height:4.5em;overflow:hidden}
+    .resource-group-badge{font-size:10px;font-weight:700;color:#0e7490;background:#ecfeff;border:1px solid #a5f3fc;border-radius:999px;padding:2px 8px;align-self:flex-start}
     .resource-title{font-size:15px;font-weight:700;color:#111827;line-height:1.3;letter-spacing:-.01em}
     .resource-tags{font-size:12px;color:#6b7280;line-height:1.4;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 8px;background:#f9fafb;border-radius:6px;border:1px solid #f3f4f6}
     .resource-tags::before{content:'';display:inline-block;width:14px;height:14px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z'/%3E%3Cline x1='7' y1='7' x2='7.01' y2='7'/%3E%3C/svg%3E");background-repeat:no-repeat;vertical-align:middle;opacity:.7;flex-shrink:0}
@@ -126,7 +130,7 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-200/80 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
   <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100 flex-shrink-0">
     <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-2 ring-brand-100">
-      <img src="/static/logo-uraia.jpg" alt="Urânia +" class="w-full h-full object-cover" />
+      <img src="/static/logo-urania.jpg" alt="Urânia +" class="w-full h-full object-cover" />
     </div>
     <div class="min-w-0">
       <div class="text-sm font-bold text-gray-900 tracking-tight">Urânia +</div>
@@ -145,6 +149,10 @@
         <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
           <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
           Dashboard
+        </a>
+        <a href="/conversations" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Conversas
         </a>
       </div>
     </div>
@@ -191,7 +199,7 @@
       </button>
       <div class="flex-1 min-w-0">
         <h1 class="text-base sm:text-lg font-bold tracking-tight text-gray-900 leading-tight">Biblioteca de Recursos</h1>
-        <p class="text-[11px] text-gray-400 font-medium hidden sm:block">Gerencie GIFs e PDFs do chatbot</p>
+        <p class="text-[11px] text-gray-400 font-medium hidden sm:block">PDFs, GIFs, imagens e grupos para o chatbot</p>
       </div>
       <div class="flex items-center gap-3 sm:gap-5">
         <div class="flex items-center gap-3 sm:gap-4 overflow-x-auto flex-shrink-0">
@@ -208,6 +216,14 @@
             <div>
               <div class="text-[9px] sm:text-[10px] text-gray-400 font-semibold leading-none">GIFs</div>
               <div id="stat-gifs" class="text-xs sm:text-sm font-bold text-gray-900 leading-tight mt-0.5">—</div>
+            </div>
+          </div>
+          <div class="w-px h-6 sm:h-8 bg-gray-200 flex-shrink-0"></div>
+          <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-cyan-50 flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <div>
+              <div class="text-[9px] sm:text-[10px] text-gray-400 font-semibold leading-none">Imagens</div>
+              <div id="stat-images" class="text-xs sm:text-sm font-bold text-gray-900 leading-tight mt-0.5">—</div>
             </div>
           </div>
           <div class="w-px h-6 sm:h-8 bg-gray-200 flex-shrink-0"></div>
@@ -234,7 +250,7 @@
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
               <h2 class="text-base font-bold text-gray-900">Arquivos Cadastrados</h2>
-              <p class="text-xs text-gray-400 mt-0.5">GIFs e PDFs disponíveis para o chatbot</p>
+              <p class="text-xs text-gray-400 mt-0.5">PDFs, GIFs e imagens disponíveis para o chatbot</p>
             </div>
             <div class="flex gap-1.5 flex-shrink-0">
               <button type="button" class="filter-btn active inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="all">
@@ -246,6 +262,9 @@
               <button type="button" class="filter-btn inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="gif">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> GIF
               </button>
+              <button type="button" class="filter-btn inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-medium cursor-pointer transition-all hover:border-brand-300 hover:bg-brand-50 font-[inherit]" data-filter="image">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Imagem
+              </button>
             </div>
           </div>
 
@@ -256,7 +275,7 @@
             </svg>
             <input type="text" id="file-search"
               class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit] placeholder:text-gray-400"
-              placeholder="Pesquisar por título ou tags..." />
+              placeholder="Pesquisar por título, tags ou descrição..." />
             <button type="button" id="clear-search"
               class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-300 text-white text-sm leading-none flex items-center justify-center hover:bg-gray-400 transition-colors cursor-pointer"
               style="display:none;">×</button>
@@ -306,13 +325,18 @@
                 <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
                 <div>
                   <h3 class="text-sm font-bold text-gray-900">Adicionar Recurso</h3>
-                  <p class="text-[11px] text-gray-400 mt-0.5">Upload de PDFs e GIFs</p>
+                  <p class="text-[11px] text-gray-400 mt-0.5">Arquivo único (PDF, GIF ou imagem) ou grupo (imagens e/ou GIFs)</p>
                 </div>
               </div>
               <svg class="chevron w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             </summary>
-            <div class="px-5 pb-5 pt-1 border-t border-gray-100">
-              <form id="upload-form" enctype="multipart/form-data" class="space-y-3">
+            <div class="px-5 pb-5 pt-1 border-t border-gray-100 space-y-4">
+              <div class="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50/80">
+                <button type="button" id="tab-upload-single" class="flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 shadow-sm border border-gray-100">Arquivo único</button>
+                <button type="button" id="tab-upload-group" class="flex-1 py-2 text-xs font-semibold rounded-md text-gray-500 hover:text-gray-800">Grupo de imagens</button>
+              </div>
+
+              <form id="upload-form" enctype="multipart/form-data" class="space-y-3 upload-panel" data-panel="single">
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label for="file-type" class="block text-[11px] font-semibold text-gray-500 mb-1">Tipo</label>
@@ -320,6 +344,7 @@
                       class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]">
                       <option value="gif">GIF</option>
                       <option value="pdf">PDF</option>
+                      <option value="image">Imagem (PNG/JPG/WebP)</option>
                     </select>
                   </div>
                   <div>
@@ -336,6 +361,12 @@
                     placeholder="senha, acesso, login, boleto" />
                 </div>
                 <div>
+                  <label for="file-description" class="block text-[11px] font-semibold text-gray-500 mb-1">Descrição <span class="font-normal text-gray-400">(para a IA e respostas)</span></label>
+                  <textarea id="file-description" name="description" rows="2"
+                    class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit] resize-y"
+                    placeholder="Explique o conteúdo para o assistente usar na conversa."></textarea>
+                </div>
+                <div>
                   <label class="block text-[11px] font-semibold text-gray-500 mb-1">Arquivo</label>
                   <div id="drop-zone" class="drop-zone border-2 border-dashed border-gray-200 rounded-xl p-5 text-center bg-gray-50/50 hover:border-brand-400 hover:bg-brand-50/30 transition-all cursor-pointer relative overflow-hidden">
                     <div class="drop-zone-content flex flex-col items-center gap-2">
@@ -346,7 +377,7 @@
                       </svg>
                       <div>
                         <p class="text-xs font-semibold text-gray-600">Arraste ou clique para enviar</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">PDF ou GIF &middot; Máx. 50MB</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">PDF, GIF ou imagem &middot; Máx. 50MB</p>
                       </div>
                       <input id="file-input" name="file" type="file" required style="display:none" />
                     </div>
@@ -366,6 +397,35 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px;margin-top:-1px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar
                   </button>
                   <span id="upload-status" class="status-text" style="margin-left:0"></span>
+                </div>
+              </form>
+
+              <form id="upload-form-group" enctype="multipart/form-data" class="space-y-3 upload-panel hidden" data-panel="group">
+                <p class="text-[11px] text-gray-500 leading-relaxed">Envie várias <strong>imagens</strong> (PNG, JPG, WebP) e/ou <strong>GIFs</strong> de uma vez (PDF não entra em grupo). Elas ficam no mesmo <strong>grupo</strong>: no chat, quando a IA escolher qualquer item, o usuário recebe <strong>todos</strong> do grupo.</p>
+                <div>
+                  <label for="group-title" class="block text-[11px] font-semibold text-gray-500 mb-1">Título do grupo</label>
+                  <input id="group-title" name="title" type="text"
+                    class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]"
+                    placeholder="Ex: Passo a passo cadastro" />
+                </div>
+                <div>
+                  <label for="group-tags" class="block text-[11px] font-semibold text-gray-500 mb-1">Tags</label>
+                  <input id="group-tags" name="tags" type="text"
+                    class="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs outline-none transition-all focus:border-brand-500 focus:ring-3 focus:ring-brand-50 hover:border-gray-300 font-[inherit]"
+                    placeholder="cadastro, tutorial, app" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-gray-500 mb-1">Arquivos do grupo (PNG, JPG, WebP ou GIF)</label>
+                  <input id="group-file-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
+                    class="block w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 cursor-pointer" />
+                </div>
+                <div id="group-desc-container" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                <div class="flex items-center gap-3 pt-1">
+                  <button type="submit" id="btn-upload-group"
+                    class="flex-1 py-2.5 rounded-lg text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-700 transition-all cursor-pointer shadow-sm hover:shadow-md inline-flex items-center justify-center gap-1.5">
+                    Enviar grupo
+                  </button>
+                  <span id="upload-group-status" class="status-text" style="margin-left:0"></span>
                 </div>
               </form>
             </div>

@@ -113,8 +113,8 @@ class Settings(BaseSettings):
             return Path(self.UPLOAD_DIR)
         return BASE_DIR / "uploads"
     ALLOWED_EXTENSIONS: List[str] = Field(
-        default=["pdf", "gif"],
-        description="Extensões permitidas"
+        default=["pdf", "gif", "image"],
+        description="Tipos de recurso permitidos no upload (pdf, gif, image)"
     )
     
     # Rate Limiting

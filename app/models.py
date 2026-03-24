@@ -7,15 +7,17 @@ from app.database import Base
 
 
 class FileModel(Base):
-    """Modelo para arquivos (PDFs e GIFs)"""
+    """Modelo para arquivos (PDF, GIF, imagens estáticas)"""
     __tablename__ = "files"
 
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, nullable=False)
     original_name = Column(String, nullable=False)
-    file_type = Column(String, nullable=False)  # "pdf" ou "gif"
+    file_type = Column(String, nullable=False)  # "pdf", "gif" ou "image"
     title = Column(String, nullable=True)
     tags = Column(String, nullable=True)  # separado por vírgula
+    description = Column(Text, nullable=True)  # texto para a IA e para enriquecer respostas
+    group_id = Column(String(64), nullable=True, index=True)  # mesmo UUID = grupo (imagens e/ou GIFs; PDF não usa grupo)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

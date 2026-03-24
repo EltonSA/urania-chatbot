@@ -9,6 +9,7 @@ class FileUpdateBody(BaseModel):
     """Schema para atualização de arquivo"""
     title: Optional[str] = None
     tags: Optional[str] = None
+    description: Optional[str] = None
 
 
 class FileOut(BaseModel):
@@ -18,6 +19,8 @@ class FileOut(BaseModel):
     file_type: str
     url: str
     tags: Optional[str]
+    description: Optional[str] = None
+    group_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -44,15 +47,22 @@ class ChatRequest(BaseModel):
 
 class AttachmentOut(BaseModel):
     """Schema para anexo na resposta"""
-    type: str  # "gif" ou "pdf"
+    type: str  # "gif", "pdf" ou "image"
     url: str
     name: Optional[str] = None
 
 
+class ReplyStepOut(BaseModel):
+    """Um passo: texto do assistente seguido (no cliente) de anexo(s), com pausa entre texto e mídia."""
+    text: str = ""
+    attachments: List[AttachmentOut] = Field(default_factory=list)
+
+
 class ChatResponse(BaseModel):
     """Schema para resposta do chat"""
-    reply: str
+    reply: str = ""
     attachments: List[AttachmentOut] = Field(default_factory=list)
+    reply_steps: List[ReplyStepOut] = Field(default_factory=list)
     should_ask_resolution: bool = False
     needs_human_support: bool = False
 
@@ -63,9 +73,13 @@ class PromptBody(BaseModel):
 
 
 class FeedbackBody(BaseModel):
-    """Schema para feedback"""
+    """Schema para feedback (Sim/Não ou solicitação de suporte)"""
     session_id: str
-    resolved: bool
+    resolved: bool = False
+    action: Optional[str] = Field(
+        default=None,
+        description="Se 'support', registra pedido de suporte humano e ignora resolved",
+    )
 
 
 class SystemSettingsBody(BaseModel):
@@ -73,6 +87,7 @@ class SystemSettingsBody(BaseModel):
     root_behavior: Optional[str] = Field(None, pattern=r"^(widget|blank|custom)$")
     root_custom_url: Optional[str] = Field(None, max_length=500)
     widget_enabled: Optional[bool] = None
+    satisfaction_support_button: Optional[bool] = None
 
     @validator("root_custom_url")
     def validate_safe_url(cls, v):

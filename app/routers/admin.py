@@ -2,9 +2,9 @@
 Rotas administrativas
 """
 from io import BytesIO
-from typing import List
+from typing import List, Optional, Any, Dict
 from collections import Counter
-from fastapi import APIRouter, HTTPException, Depends, Request, status
+from fastapi import APIRouter, HTTPException, Depends, Request, status, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import distinct, func, case, String, not_, desc
@@ -14,8 +14,9 @@ from app.database import get_db
 from app.schemas import PromptBody, SystemSettingsBody
 from app.auth import get_current_user
 from app.utils import get_setting, set_setting, ensure_upload_dirs, log_audit
-from app.models import ChatEventModel, ChatSessionModel, FileModel, FileModel, AuditLogModel
+from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogModel
 from app.config import settings
+from app.date_range import parse_stats_date_range
 import os
 import sys
 import subprocess
@@ -25,6 +26,150 @@ from pathlib import Path
 from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+def _apply_event_time_filter(q, start: Optional[datetime], end: Optional[datetime]):
+    if start is not None:
+        q = q.filter(ChatEventModel.created_at >= start)
+    if end is not None:
+        q = q.filter(ChatEventModel.created_at <= end)
+    return q
+
+
+def build_admin_stats_payload(
+    db: Session,
+    range_start: Optional[datetime],
+    range_end: Optional[datetime],
+) -> Dict[str, Any]:
+    """Métricas baseadas em chat_events; opcionalmente filtradas por created_at."""
+    from app.utils import build_file_url
+
+    def ev_filter(event_type, single=True):
+        if single:
+            q = db.query(ChatEventModel).filter_by(event_type=event_type)
+        else:
+            q = db.query(ChatEventModel).filter(ChatEventModel.event_type.in_(event_type))
+        return _apply_event_time_filter(q, range_start, range_end)
+
+    total_messages = ev_filter(["user_message", "bot_message"], single=False).count()
+
+    chats_q = db.query(distinct(ChatEventModel.session_id)).filter(
+        ChatEventModel.event_type == "chat_started"
+    )
+    chats_q = _apply_event_time_filter(chats_q, range_start, range_end)
+    chats_initiated = chats_q.count()
+
+    pdfs_sent = ev_filter("pdf_sent").count()
+    gifs_sent = ev_filter("gif_sent").count()
+    images_sent = ev_filter("image_sent").count()
+    resolved_yes = ev_filter("feedback_yes").count()
+    resolved_no = ev_filter("feedback_no").count()
+    resolved_total = resolved_yes + resolved_no
+    support_redirected = ev_filter("support_redirected").count()
+    openai_requests_success = ev_filter("openai_request_success").count()
+    openai_requests_error = ev_filter("openai_request_error").count()
+    openai_requests_total = openai_requests_success + openai_requests_error
+    openai_error_rate = (
+        round((openai_requests_error / openai_requests_total) * 100, 2)
+        if openai_requests_total > 0
+        else 0.0
+    )
+    resolution_rate = (
+        round((resolved_yes / resolved_total) * 100, 1) if resolved_total else 0
+    )
+
+    # Sessões com chat_started no período vs. feedback sim/não no período
+    swf_q = db.query(distinct(ChatEventModel.session_id)).filter(
+        ChatEventModel.event_type.in_(["feedback_yes", "feedback_no"])
+    )
+    swf_q = _apply_event_time_filter(swf_q, range_start, range_end)
+    sessions_with_feedback = set(row[0] for row in swf_q.all())
+
+    ss_q = db.query(distinct(ChatEventModel.session_id)).filter(
+        ChatEventModel.event_type == "chat_started"
+    )
+    ss_q = _apply_event_time_filter(ss_q, range_start, range_end)
+    sessions_started = set(row[0] for row in ss_q.all())
+
+    detractors = len(sessions_started - sessions_with_feedback)
+
+    def _count_events_by_file_id(event_name: str) -> Dict[int, int]:
+        q = db.query(ChatEventModel.content).filter_by(event_type=event_name)
+        q = _apply_event_time_filter(q, range_start, range_end)
+        out_counts: Dict[int, int] = {}
+        for row in q.all():
+            raw = row[0] if row[0] else None
+            if not raw:
+                continue
+            try:
+                fid = int(str(raw).strip())
+            except (ValueError, TypeError):
+                continue
+            out_counts[fid] = out_counts.get(fid, 0) + 1
+        return out_counts
+
+    yes_by_file = _count_events_by_file_id("file_resolved")
+    no_by_file = _count_events_by_file_id("file_not_resolved")
+    all_feedback_file_ids = set(yes_by_file.keys()) | set(no_by_file.keys())
+
+    files_dict: Dict[int, Any] = {}
+    if all_feedback_file_ids:
+        files = db.query(FileModel).filter(FileModel.id.in_(all_feedback_file_ids)).all()
+        files_dict = {f.id: f for f in files}
+
+    file_rows = []
+    for fid in all_feedback_file_ids:
+        cy = yes_by_file.get(fid, 0)
+        cn = no_by_file.get(fid, 0)
+        if cy == 0 and cn == 0:
+            continue
+        frow = files_dict.get(fid)
+        if not frow or not frow.file_type:
+            continue
+        file_rows.append(
+            {
+                "file_id": frow.id,
+                "file_type": str(frow.file_type).lower(),
+                "title": str(frow.title or frow.original_name or "Sem título"),
+                "url": build_file_url(frow),
+                "clicks_yes": cy,
+                "clicks_no": cn,
+                "clicks_total": cy + cn,
+                "count": cn,
+            }
+        )
+
+    file_rows.sort(key=lambda x: (x["clicks_total"], x["clicks_no"]), reverse=True)
+    files_feedback_stats = file_rows[:15]
+
+    out: Dict[str, Any] = {
+        "total_messages": total_messages,
+        "chats_initiated": chats_initiated,
+        "pdfs_sent": pdfs_sent,
+        "gifs_sent": gifs_sent,
+        "images_sent": images_sent,
+        "resolved_yes": resolved_yes,
+        "resolved_no": resolved_no,
+        "resolved_total": resolved_total,
+        "detractors": detractors,
+        "support_redirected": support_redirected,
+        "resolution_rate": resolution_rate,
+        "files_not_resolved": files_feedback_stats,
+        "files_feedback_stats": files_feedback_stats,
+        "openai_requests_total": openai_requests_total,
+        "openai_requests_success": openai_requests_success,
+        "openai_requests_error": openai_requests_error,
+        "openai_error_rate": openai_error_rate,
+    }
+    if range_start is not None and range_end is not None:
+        out["date_from"] = range_start.strftime("%Y-%m-%d")
+        out["date_to"] = range_end.strftime("%Y-%m-%d")
+        out["filtered"] = True
+    else:
+        out["date_from"] = None
+        out["date_to"] = None
+        out["filtered"] = False
+    return out
 
 
 @router.get("/prompt")
@@ -67,102 +212,19 @@ def save_prompt(
 @router.get("/stats")
 def admin_stats(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    date_from: Optional[str] = Query(
+        None,
+        description="Data inicial (YYYY-MM-DD, UTC). Omita ambas as datas para todo o período.",
+    ),
+    date_to: Optional[str] = Query(
+        None,
+        description="Data final (YYYY-MM-DD, UTC), inclusiva.",
+    ),
 ):
-    """Estatísticas do sistema. Requer autenticação - OTIMIZADO"""
-    from app.utils import build_file_url
-    
-    # Agrega contagens de eventos em queries otimizadas (agrupadas por tipo)
-    # Total de mensagens
-    total_messages = db.query(ChatEventModel).filter(
-        ChatEventModel.event_type.in_(["user_message", "bot_message"])
-    ).count()
-    
-    # Chats iniciados
-    chats_initiated = db.query(distinct(ChatEventModel.session_id)).filter(
-        ChatEventModel.event_type == "chat_started"
-    ).count()
-    
-    # Contagens simples por tipo de evento
-    pdfs_sent = db.query(ChatEventModel).filter_by(event_type="pdf_sent").count()
-    gifs_sent = db.query(ChatEventModel).filter_by(event_type="gif_sent").count()
-    resolved_yes = db.query(ChatEventModel).filter_by(event_type="feedback_yes").count()
-    resolved_no = db.query(ChatEventModel).filter_by(event_type="feedback_no").count()
-    resolved_total = resolved_yes + resolved_no
-    support_redirected = db.query(ChatEventModel).filter_by(event_type="support_redirected").count()
-    openai_requests_success = db.query(ChatEventModel).filter_by(event_type="openai_request_success").count()
-    openai_requests_error = db.query(ChatEventModel).filter_by(event_type="openai_request_error").count()
-    openai_requests_total = openai_requests_success + openai_requests_error
-    openai_error_rate = round((openai_requests_error / openai_requests_total) * 100, 2) if openai_requests_total > 0 else 0.0
-    resolution_rate = round((resolved_yes / resolved_total) * 100, 1) if resolved_total else 0
-    
-    # Detratores: sessões que tiveram chat_started mas nunca deram feedback
-    sessions_with_feedback = set(
-        row[0] for row in db.query(distinct(ChatEventModel.session_id)).filter(
-            ChatEventModel.event_type.in_(["feedback_yes", "feedback_no"])
-        ).all()
-    )
-    sessions_started = set(
-        row[0] for row in db.query(distinct(ChatEventModel.session_id)).filter(
-            ChatEventModel.event_type == "chat_started"
-        ).all()
-    )
-    detractors = len(sessions_started - sessions_with_feedback)
-
-    # Arquivos que não resolveram - OTIMIZADO: agrupa eventos e busca arquivos em batch
-    files_not_resolved_events = db.query(ChatEventModel.content).filter_by(
-        event_type="file_not_resolved"
-    ).all()
-    
-    # Conta ocorrências por file_id
-    file_id_counts = {}
-    file_ids_to_fetch = set()
-    for row in files_not_resolved_events:
-        file_id = row[0] if row[0] else None
-        if file_id:
-            try:
-                file_id_int = int(file_id)
-                file_id_counts[file_id_int] = file_id_counts.get(file_id_int, 0) + 1
-                file_ids_to_fetch.add(file_id_int)
-            except (ValueError, TypeError):
-                continue
-    
-    # Busca todos os arquivos de uma vez (evita N+1)
-    files_dict = {}
-    if file_ids_to_fetch:
-        files = db.query(FileModel).filter(FileModel.id.in_(file_ids_to_fetch)).all()
-        files_dict = {f.id: f for f in files}
-    
-    # Constrói lista final
-    files_not_resolved_list = []
-    for file_id, count in sorted(file_id_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
-        file = files_dict.get(file_id)
-        if file and file.file_type:
-            files_not_resolved_list.append({
-                "file_id": file.id,
-                "file_type": str(file.file_type).lower(),
-                "title": str(file.title or file.original_name or "Sem título"),
-                "url": build_file_url(file),
-                "count": count
-            })
-
-    return {
-        "total_messages": total_messages,
-        "chats_initiated": chats_initiated,
-        "pdfs_sent": pdfs_sent,
-        "gifs_sent": gifs_sent,
-        "resolved_yes": resolved_yes,
-        "resolved_no": resolved_no,
-        "resolved_total": resolved_total,
-        "detractors": detractors,
-        "support_redirected": support_redirected,
-        "resolution_rate": resolution_rate,
-        "files_not_resolved": files_not_resolved_list,
-        "openai_requests_total": openai_requests_total,
-        "openai_requests_success": openai_requests_success,
-        "openai_requests_error": openai_requests_error,
-        "openai_error_rate": openai_error_rate,
-    }
+    """Estatísticas do sistema; filtro opcional por intervalo de datas nos eventos."""
+    rs, re = parse_stats_date_range(date_from, date_to)
+    return build_admin_stats_payload(db, rs, re)
 
 
 @router.get("/files/stats")
@@ -177,41 +239,38 @@ def files_stats(
     # Conta arquivos por tipo no banco
     total_pdfs = db.query(FileModel).filter_by(file_type="pdf").count()
     total_gifs = db.query(FileModel).filter_by(file_type="gif").count()
-    total_files = total_pdfs + total_gifs
-    
+    total_images = db.query(FileModel).filter_by(file_type="image").count()
+    total_files = total_pdfs + total_gifs + total_images
+
     # Calcula tamanho total dos arquivos
-    pdf_dir_str, gif_dir_str = ensure_upload_dirs()
+    pdf_dir_str, gif_dir_str, image_dir_str = ensure_upload_dirs()
     total_size = 0
-    
-    # Soma tamanho dos PDFs
-    if os.path.isdir(pdf_dir_str):
-        for filename in os.listdir(pdf_dir_str):
-            filepath = os.path.join(pdf_dir_str, filename)
-            if os.path.isfile(filepath):
-                try:
-                    total_size += os.path.getsize(filepath)
-                except (OSError, FileNotFoundError):
-                    logger.warning(f"Erro ao obter tamanho do arquivo: {filepath}")
-                    continue
-    
-    # Soma tamanho dos GIFs
-    if os.path.isdir(gif_dir_str):
-        for filename in os.listdir(gif_dir_str):
-            filepath = os.path.join(gif_dir_str, filename)
-            if os.path.isfile(filepath):
-                try:
-                    total_size += os.path.getsize(filepath)
-                except (OSError, FileNotFoundError):
-                    logger.warning(f"Erro ao obter tamanho do arquivo: {filepath}")
-                    continue
-    
-    logger.info(f"Estatísticas de arquivos: {total_pdfs} PDFs, {total_gifs} GIFs, {total_size} bytes")
-    
+
+    for dir_str in (pdf_dir_str, gif_dir_str, image_dir_str):
+        if os.path.isdir(dir_str):
+            for filename in os.listdir(dir_str):
+                filepath = os.path.join(dir_str, filename)
+                if os.path.isfile(filepath):
+                    try:
+                        total_size += os.path.getsize(filepath)
+                    except (OSError, FileNotFoundError):
+                        logger.warning("Erro ao obter tamanho do arquivo: %s", filepath)
+                        continue
+
+    logger.info(
+        "Estatísticas de arquivos: %s PDFs, %s GIFs, %s imagens, %s bytes",
+        total_pdfs,
+        total_gifs,
+        total_images,
+        total_size,
+    )
+
     return {
         "total_pdfs": total_pdfs,
         "total_gifs": total_gifs,
+        "total_images": total_images,
         "total_files": total_files,
-        "total_size_bytes": total_size
+        "total_size_bytes": total_size,
     }
 
 
@@ -225,6 +284,7 @@ def get_system_settings(
         "root_behavior": get_setting(db, "root_behavior") or "widget",
         "root_custom_url": get_setting(db, "root_custom_url") or "",
         "widget_enabled": get_setting(db, "widget_enabled") != "false",
+        "satisfaction_support_button": get_setting(db, "satisfaction_support_button") != "false",
     }
 
 
@@ -241,6 +301,11 @@ def save_system_settings(
         "root_behavior": body.root_behavior,
         "root_custom_url": body.root_custom_url,
         "widget_enabled": str(body.widget_enabled).lower() if body.widget_enabled is not None else None,
+        "satisfaction_support_button": (
+            str(body.satisfaction_support_button).lower()
+            if body.satisfaction_support_button is not None
+            else None
+        ),
     }
     for key, value in fields.items():
         if value is not None:
@@ -289,20 +354,28 @@ def get_audit_logs(
 @router.get("/export.xlsx")
 def export_excel(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD"),
 ):
-    """Exporta estatísticas para Excel. Requer autenticação"""
-    stats = admin_stats(db, current_user)
+    """Exporta estatísticas para Excel (mesmo filtro de datas do dashboard)."""
+    rs, re = parse_stats_date_range(date_from, date_to)
+    stats = build_admin_stats_payload(db, rs, re)
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Dashboard"
 
+    if stats.get("filtered"):
+        ws.append(["Período (UTC)", f"{stats['date_from']} a {stats['date_to']}"])
+    else:
+        ws.append(["Período", "Todo o histórico"])
     ws.append(["Métrica", "Valor"])
     ws.append(["Total de mensagens", stats["total_messages"]])
     ws.append(["Chats iniciados", stats["chats_initiated"]])
     ws.append(["PDFs enviados", stats["pdfs_sent"]])
     ws.append(["GIFs enviados", stats["gifs_sent"]])
+    ws.append(["Imagens enviadas", stats.get("images_sent", 0)])
     ws.append(["Resoluções (Sim)", stats["resolved_yes"]])
     ws.append(["Resoluções (Total)", stats["resolved_total"]])
     ws.append(["Taxa de resolução (%)", stats["resolution_rate"]])
@@ -312,6 +385,27 @@ def export_excel(
     ws.append(["Requisições com sucesso", stats.get("openai_requests_success", 0)])
     ws.append(["Requisições com erro", stats.get("openai_requests_error", 0)])
     ws.append(["Taxa de erro (%)", stats.get("openai_error_rate", 0)])
+
+    ff = stats.get("files_feedback_stats") or stats.get("files_not_resolved") or []
+    if ff:
+        ws.append([])
+        ws.append(["=== Arquivos — feedback (último envio na sessão) ===", ""])
+        ws.append(["Título", "Tipo", "Cliques em Sim", "Cliques em Não", "Total"])
+        for row in ff:
+            cy = int(row.get("clicks_yes") or 0)
+            if "clicks_no" in row:
+                cn = int(row.get("clicks_no") or 0)
+            else:
+                cn = int(row.get("count") or 0)
+            ws.append(
+                [
+                    row.get("title", ""),
+                    str(row.get("file_type", "")).upper(),
+                    cy,
+                    cn,
+                    cy + cn,
+                ]
+            )
 
     bio = BytesIO()
     wb.save(bio)

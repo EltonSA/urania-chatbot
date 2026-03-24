@@ -24,10 +24,63 @@ function getAuthHeaders() {
 
 let isLoading = false;
 let loadStatsTimeout = null;
+/** Se o utilizador clica em «Aplicar» durante um carregamento, agenda um novo pedido (evita ignorar o filtro em silêncio). */
+let loadStatsQueued = false;
+let dashDateDebounceTimer = null;
+
+function scheduleNextLoad() {
+  if (loadStatsTimeout) {
+    clearTimeout(loadStatsTimeout);
+  }
+  loadStatsTimeout = setTimeout(() => {
+    loadStats(false);
+  }, 10000);
+}
+
+function getDashboardDateQuery() {
+  const dfEl = document.getElementById("dash-date-from");
+  const dtEl = document.getElementById("dash-date-to");
+  const fromVal = dfEl && dfEl.value ? String(dfEl.value).trim() : "";
+  const toVal = dtEl && dtEl.value ? String(dtEl.value).trim() : "";
+  const params = new URLSearchParams();
+  if (fromVal) params.set("date_from", fromVal);
+  if (toVal) params.set("date_to", toVal);
+  const s = params.toString();
+  return s ? ("?" + s) : "";
+}
+
+function showDashFilterError(message) {
+  const el = document.getElementById("dash-filter-error");
+  if (!el) return;
+  if (message) {
+    el.textContent = message;
+    el.classList.remove("hidden");
+  } else {
+    el.textContent = "";
+    el.classList.add("hidden");
+  }
+}
+
+function updateDashboardPeriodHint(data) {
+  const el = document.getElementById("dashboard-period-hint");
+  if (!el || !data) return;
+  if (data.filtered && data.date_from != null && data.date_to != null) {
+    el.textContent = "Período aplicado: " + data.date_from + " a " + data.date_to + " (UTC)";
+    el.classList.remove("text-gray-500");
+    el.classList.add("text-brand-700");
+  } else {
+    el.textContent = "Período: todo o histórico";
+    el.classList.add("text-gray-500");
+    el.classList.remove("text-brand-700");
+  }
+}
 
 async function loadStats(showLoading = true){
-  // Evita múltiplas requisições simultâneas
+  // Evita pedidos em paralelo; pedidos manuais (Aplicar / limpar filtro) ficam em fila em vez de serem ignorados.
   if (isLoading) {
+    if (showLoading) {
+      loadStatsQueued = true;
+    }
     return;
   }
   
@@ -45,32 +98,60 @@ async function loadStats(showLoading = true){
   }
 
   try {
+    const dfEl = document.getElementById("dash-date-from");
+    const dtEl = document.getElementById("dash-date-to");
+    let fromVal = dfEl && dfEl.value ? String(dfEl.value).trim() : "";
+    let toVal = dtEl && dtEl.value ? String(dtEl.value).trim() : "";
+    if (fromVal && !toVal && dtEl) {
+      dtEl.value = fromVal;
+      toVal = fromVal;
+    } else if (!fromVal && toVal && dfEl) {
+      dfEl.value = toVal;
+      fromVal = toVal;
+    }
+    if (fromVal && toVal && fromVal > toVal) {
+      showDashFilterError("A data inicial não pode ser posterior à data final.");
+      return;
+    }
+
     const startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    const res = await fetch("/admin/stats", {
+    const statsUrl = "/admin/stats" + getDashboardDateQuery();
+    const res = await fetch(statsUrl, {
       headers: getAuthHeaders(),
-      cache: 'no-cache' // Evita cache do navegador
+      cache: "no-store",
     });
     
     if (!res.ok) {
       if (res.status === 401) {
         console.log("Token inválido, redirecionando para login");
-        isLoading = false;
-        if (loadingOverlay) loadingOverlay.style.display = "none";
         window.location.href = '/login';
         return;
       }
+      if (res.status === 400) {
+        let detail = "Intervalo de datas inválido.";
+        try {
+          const errBody = await res.json();
+          if (errBody && errBody.detail) {
+            detail = typeof errBody.detail === "string" ? errBody.detail : detail;
+          }
+        } catch (_) { /* ignore */ }
+        showDashFilterError(detail);
+        return;
+      }
       console.error("Erro ao carregar estatísticas:", res.status);
-      isLoading = false;
-      if (loadingOverlay) loadingOverlay.style.display = "none";
+      showDashFilterError("Não foi possível carregar as estatísticas.");
       return;
     }
     
     const data = await res.json();
+    showDashFilterError("");
+    updateDashboardPeriodHint(data);
 
     const mTotal = document.getElementById("m_total");
     const mChats = document.getElementById("m_chats");
     const mPdfs = document.getElementById("m_pdfs");
     const mGifs = document.getElementById("m_gifs");
+    const mImages = document.getElementById("m_images");
     const mResolvedYes = document.getElementById("m_resolved_yes");
     const mResolvedNo = document.getElementById("m_resolved_no");
     const mDetractors = document.getElementById("m_detractors");
@@ -80,6 +161,7 @@ async function loadStats(showLoading = true){
     if(mChats) mChats.textContent = data.chats_initiated ?? 0;
     if(mPdfs) mPdfs.textContent = data.pdfs_sent ?? 0;
     if(mGifs) mGifs.textContent = data.gifs_sent ?? 0;
+    if(mImages) mImages.textContent = data.images_sent ?? 0;
     if(mResolvedYes) mResolvedYes.textContent = data.resolved_yes ?? 0;
     if(mResolvedNo) mResolvedNo.textContent = data.resolved_no ?? 0;
     if(mDetractors) mDetractors.textContent = data.detractors ?? 0;
@@ -115,12 +197,12 @@ async function loadStats(showLoading = true){
       }
     }
 
-    // Arquivos que não resolveram - novo design
+    // Arquivos — feedback Sim / Não (por último envio na sessão)
     const filesList = document.getElementById("files_not_resolved");
     const filesEmpty = document.getElementById("files_empty");
     if(filesList){
       filesList.innerHTML = "";
-      const files = data.files_not_resolved || [];
+      const files = data.files_feedback_stats || data.files_not_resolved || [];
       
       if(files.length === 0){
         if(filesEmpty) filesEmpty.style.display = "flex";
@@ -129,6 +211,9 @@ async function loadStats(showLoading = true){
         files.forEach(item => {
           const fileType = String(item.file_type || "").toLowerCase().trim();
           const titleText = String(item.title || item.original_name || "Sem título").trim();
+          const nYes = item.clicks_yes != null ? Number(item.clicks_yes) : 0;
+          const nNo = item.clicks_no != null ? Number(item.clicks_no) : Number(item.count || 0);
+          const nTotal = item.clicks_total != null ? Number(item.clicks_total) : (nYes + nNo);
           
           const card = document.createElement("div");
           card.className = "modern-card file-card";
@@ -144,6 +229,9 @@ async function loadStats(showLoading = true){
           } else if(fileType === "gif"){
             typeBadge.classList.add("badge-gif");
             typeBadge.innerHTML = '<span class="badge-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span><span class="badge-text">GIF</span>';
+          } else if(fileType === "image"){
+            typeBadge.classList.add("badge-image");
+            typeBadge.innerHTML = '<span class="badge-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span><span class="badge-text">IMG</span>';
           } else {
             typeBadge.classList.add("badge-unknown");
             typeBadge.innerHTML = '<span class="badge-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span><span class="badge-text">FILE</span>';
@@ -157,8 +245,34 @@ async function loadStats(showLoading = true){
           title.textContent = titleText;
           
           const meta = document.createElement("div");
-          meta.className = "file-meta";
-          meta.innerHTML = `<span class="count-badge">${item.count || 0} "Não"</span>`;
+          meta.className = "file-meta space-y-1";
+          const line1 = document.createElement("div");
+          line1.className = "flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-600";
+          const spanY = document.createElement("span");
+          const lblY = document.createElement("span");
+          lblY.className = "text-gray-400 font-medium";
+          lblY.textContent = "Resolveu (Sim): ";
+          const numY = document.createElement("strong");
+          numY.className = "text-emerald-700 tabular-nums";
+          numY.textContent = String(nYes);
+          spanY.appendChild(lblY);
+          spanY.appendChild(numY);
+          const spanN = document.createElement("span");
+          const lblN = document.createElement("span");
+          lblN.className = "text-gray-400 font-medium";
+          lblN.textContent = "Não resolveu: ";
+          const numN = document.createElement("strong");
+          numN.className = "text-rose-700 tabular-nums";
+          numN.textContent = String(nNo);
+          spanN.appendChild(lblN);
+          spanN.appendChild(numN);
+          line1.appendChild(spanY);
+          line1.appendChild(spanN);
+          const line2 = document.createElement("div");
+          line2.className = "text-[10px] text-gray-400";
+          line2.textContent = "Total de respostas no cartão ligadas a este arquivo (no período): " + nTotal;
+          meta.appendChild(line1);
+          meta.appendChild(line2);
           
           fileInfo.appendChild(title);
           fileInfo.appendChild(meta);
@@ -176,7 +290,7 @@ async function loadStats(showLoading = true){
             viewBtn.onclick = () => {
               if(fileType === "pdf"){
                 window.open(item.url, "_blank");
-              } else if(fileType === "gif"){
+              } else if(fileType === "gif" || fileType === "image"){
                 const modal = document.createElement("div");
                 modal.className = "file-modal-overlay";
                 modal.onclick = (e) => {
@@ -197,6 +311,8 @@ async function loadStats(showLoading = true){
                 modalContent.appendChild(img);
                 modal.appendChild(modalContent);
                 document.body.appendChild(modal);
+              } else {
+                window.open(item.url, "_blank");
               }
             };
             rightSection.appendChild(viewBtn);
@@ -217,10 +333,17 @@ async function loadStats(showLoading = true){
     }
   } catch (err) {
     console.error("Erro ao carregar estatísticas:", err);
+    showDashFilterError("Erro de rede ao carregar estatísticas.");
   } finally {
     isLoading = false;
     if (loadingOverlay) {
       loadingOverlay.style.display = "none";
+    }
+    if (loadStatsQueued) {
+      loadStatsQueued = false;
+      loadStats(true);
+    } else if (getAuthToken()) {
+      scheduleNextLoad();
     }
   }
 }
@@ -234,10 +357,27 @@ async function exportExcel() {
     return;
   }
 
+  const dfEl = document.getElementById("dash-date-from");
+  const dtEl = document.getElementById("dash-date-to");
+  let fromVal = dfEl && dfEl.value ? String(dfEl.value).trim() : "";
+  let toVal = dtEl && dtEl.value ? String(dtEl.value).trim() : "";
+  if (fromVal && !toVal && dtEl) {
+    dtEl.value = fromVal;
+    toVal = fromVal;
+  } else if (!fromVal && toVal && dfEl) {
+    dfEl.value = toVal;
+    fromVal = toVal;
+  }
+  if (fromVal && toVal && fromVal > toVal) {
+    alert("A data inicial não pode ser posterior à data final.");
+    return;
+  }
+
   try {
-    const response = await fetch("/admin/export.xlsx", {
+    const response = await fetch("/admin/export.xlsx" + getDashboardDateQuery(), {
       method: "GET",
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -272,21 +412,8 @@ const authToken = getAuthToken();
 if (!authToken) {
   window.location.href = '/login';
 } else {
-  // Carrega imediatamente na primeira vez
+  // Primeira carga; o próximo poll de 10s é agendado no finally de loadStats
   loadStats(true);
-  
-  // Atualiza a cada 10 segundos (aumentado de 8s para reduzir carga)
-  // Usa timeout em vez de setInterval para evitar sobreposição
-  function scheduleNextLoad() {
-    if (loadStatsTimeout) {
-      clearTimeout(loadStatsTimeout);
-    }
-    loadStatsTimeout = setTimeout(() => {
-      loadStats(false); // Não mostra loading nas atualizações automáticas
-      scheduleNextLoad();
-    }, 10000);
-  }
-  scheduleNextLoad();
   
   // Adiciona evento ao botão de exportar
   const exportBtn = document.getElementById("export-excel-btn");
@@ -296,6 +423,38 @@ if (!authToken) {
       exportExcel();
     });
   }
+
+  const dashApply = document.getElementById("dash-apply-filter");
+  if (dashApply) {
+    dashApply.addEventListener("click", () => loadStats(true));
+  }
+  const dashClear = document.getElementById("dash-clear-filter");
+  if (dashClear) {
+    dashClear.addEventListener("click", () => {
+      const df = document.getElementById("dash-date-from");
+      const dt = document.getElementById("dash-date-to");
+      if (df) df.value = "";
+      if (dt) dt.value = "";
+      showDashFilterError("");
+      loadStats(true);
+    });
+  }
+
+  function scheduleDashboardDateReload() {
+    if (dashDateDebounceTimer) {
+      clearTimeout(dashDateDebounceTimer);
+    }
+    dashDateDebounceTimer = setTimeout(() => {
+      dashDateDebounceTimer = null;
+      loadStats(true);
+    }, 400);
+  }
+  ["dash-date-from", "dash-date-to"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", scheduleDashboardDateReload);
+    }
+  });
   
   // Logout
   const logoutBtn = document.getElementById("btn-logout");

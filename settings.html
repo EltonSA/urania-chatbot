@@ -111,7 +111,7 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-200/80 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
   <div class="h-16 flex items-center gap-3 px-5 border-b border-gray-100 flex-shrink-0">
     <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-2 ring-brand-100">
-      <img src="/static/logo-uraia.jpg" alt="Urânia +" class="w-full h-full object-cover" />
+      <img src="/static/logo-urania.jpg" alt="Urânia +" class="w-full h-full object-cover" />
     </div>
     <div class="min-w-0">
       <div class="text-sm font-bold text-gray-900 tracking-tight">Urânia +</div>
@@ -130,6 +130,10 @@
         <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
           <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
           Dashboard
+        </a>
+        <a href="/conversations" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200">
+          <svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Conversas
         </a>
       </div>
     </div>
@@ -243,6 +247,21 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           Widget ativo em todos os sites
         </div>
+
+        <div class="mt-5 pt-5 border-t border-gray-200 flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-gray-900">Satisfação do chat</div>
+            <p class="text-xs text-gray-500 mt-1 leading-relaxed">No cartão “Conseguiu resolver?”, exibe também o botão <strong>Solicitar suporte</strong> (além de Sim e Não). Desative se não quiser oferecer essa opção.</p>
+          </div>
+          <div class="toggle-track on flex-shrink-0" id="satisfaction-support-toggle" role="switch" tabindex="0" aria-label="Botão solicitar suporte na satisfação">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+        <div id="satisfaction-support-status" class="mt-3 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Botão “Solicitar suporte” visível no widget
+        </div>
+
         <div class="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200 text-[13px] text-gray-700">
           <div class="font-semibold text-gray-900 mb-1">Widget em outro domínio</div>
           <p class="mb-2">Para o balão conectar ao chat quando o site está em outro domínio (ex: beta.urania.com.br e chat em iabeta.urania.com.br), <strong>carregue o script a partir da URL do chatbot</strong>. O widget usa a origem do script como URL da API.</p>
@@ -357,6 +376,7 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         state.root_behavior = d.root_behavior || 'widget';
         state.root_custom_url = d.root_custom_url || '';
         state.widget_enabled = d.widget_enabled !== false;
+        state.satisfaction_support_button = d.satisfaction_support_button !== false;
         render();
       })
       .catch(function () { showToast('Erro ao carregar configurações', 'error'); });
@@ -384,6 +404,19 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       statusEl.className = 'mt-4 text-xs font-medium text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-200 inline-flex items-center gap-2';
       statusEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Widget desativado';
     }
+
+    var supToggle = document.getElementById('satisfaction-support-toggle');
+    if (supToggle) supToggle.classList.toggle('on', state.satisfaction_support_button);
+    var supStatus = document.getElementById('satisfaction-support-status');
+    if (supStatus) {
+      if (state.satisfaction_support_button) {
+        supStatus.className = 'mt-3 text-xs font-medium text-brand-600 bg-brand-50 px-3 py-2 rounded-lg border border-brand-200 inline-flex items-center gap-2';
+        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Botão “Solicitar suporte” visível no widget';
+      } else {
+        supStatus.className = 'mt-3 text-xs font-medium text-gray-600 bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 inline-flex items-center gap-2';
+        supStatus.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Somente Sim / Não no cartão de satisfação';
+      }
+    }
   }
 
   document.querySelectorAll('#root-options .radio-opt').forEach(function (el) {
@@ -402,6 +435,11 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     render();
   });
 
+  document.getElementById('satisfaction-support-toggle').addEventListener('click', function () {
+    state.satisfaction_support_button = !state.satisfaction_support_button;
+    render();
+  });
+
   document.getElementById('btn-save').addEventListener('click', function () {
     var btn = this;
     btn.disabled = true;
@@ -413,7 +451,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       body: JSON.stringify({
         root_behavior: state.root_behavior,
         root_custom_url: state.root_custom_url,
-        widget_enabled: state.widget_enabled
+        widget_enabled: state.widget_enabled,
+        satisfaction_support_button: state.satisfaction_support_button
       })
     })
     .then(function (r) { if (!r.ok) throw r; return r.json(); })

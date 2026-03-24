@@ -113,8 +113,9 @@ def main():
             # Conta arquivos
             pdf_count = len(list((upload_dir / "pdfs").glob("*"))) if (upload_dir / "pdfs").exists() else 0
             gif_count = len(list((upload_dir / "gifs").glob("*"))) if (upload_dir / "gifs").exists() else 0
-            
-            print(f"   ✅ Arquivos restaurados: {pdf_count} PDFs, {gif_count} GIFs")
+            image_count = len(list((upload_dir / "images").glob("*"))) if (upload_dir / "images").exists() else 0
+
+            print(f"   ✅ Arquivos restaurados: {pdf_count} PDFs, {gif_count} GIFs, {image_count} imagens")
         else:
             print("   ⚠️  Diretório de uploads não encontrado no backup")
         

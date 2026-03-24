@@ -70,7 +70,13 @@ def dashboard_page(request: Request):
     """Página do dashboard - Requer autenticação"""
     if not verify_token_from_cookie_or_header(request):
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    return FileResponse(os.path.join(BASE_DIR, "dashboard.html"))
+    return FileResponse(
+        os.path.join(BASE_DIR, "dashboard.html"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -93,14 +99,6 @@ def conversations_page(request: Request):
     if not verify_token_from_cookie_or_header(request):
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     return FileResponse(os.path.join(BASE_DIR, "conversations.html"))
-
-
-@router.get("/conversation-view.html", response_class=HTMLResponse)
-def conversation_view_page(request: Request):
-    """Página de visualização de conversa - Requer autenticação"""
-    if not verify_token_from_cookie_or_header(request):
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    return FileResponse(os.path.join(BASE_DIR, "conversation-view.html"))
 
 
 def _is_safe_redirect(url: str) -> bool:

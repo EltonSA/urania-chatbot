@@ -56,8 +56,8 @@ data/*.sqlite3
 *.log
 logs/
 
-# Uploads (opcional - descomente se não quiser versionar)
-# uploads/
+# Conteúdo enviado pelos utilizadores (não versionar)
+uploads/images/
 
 # Backups
 backups/

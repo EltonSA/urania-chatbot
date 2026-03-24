@@ -7,7 +7,7 @@ if (isProduction) {
 
 // Aguarda DOM estar pronto
 let promptText, btnSavePrompt, promptStatus, uploadForm, uploadStatus, filesEmpty, filesList;
-let statPdfs, statGifs, statTotalSize;
+let statPdfs, statGifs, statImages, statTotalSize;
 let fileSearch, clearSearchBtn;
 let allFiles = []; // Armazena todos os arquivos para filtro
 let currentTypeFilter = "all"; // Filtro atual por tipo
@@ -22,6 +22,7 @@ function initElements() {
     filesList = document.getElementById("files-list");
     statPdfs = document.getElementById("stat-pdfs");
     statGifs = document.getElementById("stat-gifs");
+    statImages = document.getElementById("stat-images");
     statTotalSize = document.getElementById("stat-total-size");
     fileSearch = document.getElementById("file-search");
     clearSearchBtn = document.getElementById("clear-search");
@@ -263,7 +264,8 @@ function renderFiles(files, searchTerm = "") {
         filteredFiles = filteredFiles.filter(f => {
             const title = (f.title || "").toLowerCase();
             const tags = (f.tags || "").toLowerCase();
-            return title.includes(searchTerm) || tags.includes(searchTerm);
+            const desc = (f.description || "").toLowerCase();
+            return title.includes(searchTerm) || tags.includes(searchTerm) || desc.includes(searchTerm);
         });
     }
 
@@ -290,13 +292,18 @@ function renderFiles(files, searchTerm = "") {
     item.className = "resource-item";
     item.dataset.fileId = f.id; // Adiciona ID para facilitar busca
 
+    const iconExtra = f.file_type === "pdf" ? "pdf" : f.file_type === "image" ? "image" : "";
+    const iconSvg = f.file_type === "pdf"
+        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+
     // Header com ícone e informações principais
     const header = document.createElement("div");
     header.className = "resource-item-header";
 
     const icon = document.createElement("div");
-    icon.className = "resource-icon " + (f.file_type === "pdf" ? "pdf" : "gif");
-    icon.innerHTML = f.file_type === "pdf" ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+    icon.className = "resource-icon " + iconExtra;
+    icon.innerHTML = iconSvg;
     header.appendChild(icon);
 
     const info = document.createElement("div");
@@ -307,9 +314,18 @@ function renderFiles(files, searchTerm = "") {
 
     // Tipo primeiro (mais destaque)
     const typePill = document.createElement("span");
-    typePill.className = "resource-type-pill " + (f.file_type === "pdf" ? "pdf" : "");
-    typePill.textContent = f.file_type.toUpperCase();
+    typePill.className = "resource-type-pill " + (f.file_type === "pdf" ? "pdf" : f.file_type === "image" ? "image" : "");
+    const typeLabel = f.file_type === "image" ? "IMAGEM" : f.file_type.toUpperCase();
+    typePill.textContent = typeLabel;
     titleRow.appendChild(typePill);
+
+    if (f.group_id) {
+        const gb = document.createElement("span");
+        gb.className = "resource-group-badge";
+        gb.textContent = "Grupo";
+        gb.title = "Parte de um conjunto de imagens e/ou GIFs enviados juntos";
+        titleRow.appendChild(gb);
+    }
 
     // Título depois
     const title = document.createElement("div");
@@ -324,6 +340,13 @@ function renderFiles(files, searchTerm = "") {
         tags.className = "resource-tags";
         tags.textContent = f.tags;
         info.appendChild(tags);
+    }
+
+    if (f.description && f.description.trim()) {
+        const descEl = document.createElement("div");
+        descEl.className = "resource-desc";
+        descEl.textContent = f.description.trim();
+        info.appendChild(descEl);
     }
 
     header.appendChild(info);
@@ -378,9 +401,12 @@ function viewFile(file) {
     title.textContent = file.title || "Visualizando arquivo";
     body.innerHTML = "";
     
-    const fileUrl = file.url || (file.file_type === "pdf" 
-        ? `/files/pdf/${file.id}` 
-        : `/files/gif/${file.id}`);
+    let fileUrl = file.url;
+    if (!fileUrl) {
+        if (file.file_type === "pdf") fileUrl = `/files/pdf/${file.id}`;
+        else if (file.file_type === "gif") fileUrl = `/files/gif/${file.id}`;
+        else if (file.file_type === "image") fileUrl = `/files/image/${file.id}`;
+    }
     
     if (file.file_type === "pdf") {
         const iframe = document.createElement("iframe");
@@ -390,7 +416,7 @@ function viewFile(file) {
         iframe.style.border = "none";
         iframe.style.borderRadius = "8px";
         body.appendChild(iframe);
-    } else if (file.file_type === "gif") {
+    } else if (file.file_type === "gif" || file.file_type === "image") {
         const img = document.createElement("img");
         img.src = fileUrl;
         img.style.maxWidth = "100%";
@@ -468,6 +494,7 @@ function editFile(file) {
     // Salva valores originais
     const originalTitle = file.title || '';
     const originalTags = file.tags || '';
+    const originalDescription = file.description || '';
     
     // Cria inputs de edição
     const titleInput = document.createElement('input');
@@ -481,6 +508,12 @@ function editFile(file) {
     tagsInput.className = 'edit-input edit-tags-input';
     tagsInput.value = originalTags;
     tagsInput.placeholder = 'Tags (separadas por vírgula)';
+
+    const descInput = document.createElement('textarea');
+    descInput.className = 'edit-input edit-desc-input';
+    descInput.value = originalDescription;
+    descInput.placeholder = 'Descrição para a IA (opcional)';
+    descInput.rows = 2;
     
     // Substitui título
     const titleContainer = titleEl.parentElement;
@@ -501,6 +534,12 @@ function editFile(file) {
             infoEl.appendChild(tagsInput);
         }
     }
+
+    const infoForDesc = itemElement.querySelector('.resource-info');
+    if (infoForDesc) {
+        descInput.style.display = 'block';
+        infoForDesc.appendChild(descInput);
+    }
     
     // Cria botões de ação
     const editActions = document.createElement('div');
@@ -510,7 +549,7 @@ function editFile(file) {
     btnSave.type = 'button';
     btnSave.className = 'btn-small btn-save-edit';
     btnSave.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar';
-    btnSave.addEventListener('click', () => saveEdit(file.id, titleInput.value, tagsInput.value, originalTitle, originalTags));
+    btnSave.addEventListener('click', () => saveEdit(file.id, titleInput.value, tagsInput.value, descInput.value, originalTitle, originalTags, originalDescription));
     
     const btnCancel = document.createElement('button');
     btnCancel.type = 'button';
@@ -540,8 +579,15 @@ function editFile(file) {
     tagsInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            saveEdit(file.id, titleInput.value, tagsInput.value, originalTitle, originalTags);
+            saveEdit(file.id, titleInput.value, tagsInput.value, descInput.value, originalTitle, originalTags, originalDescription);
         } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit(file.id);
+        }
+    });
+
+    descInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
             e.preventDefault();
             cancelEdit(file.id);
         }
@@ -578,6 +624,11 @@ function cancelEdit(fileId) {
                     tagsInput.remove();
                 }
             }
+
+            const descInputEl = item.querySelector('.edit-desc-input');
+            if (descInputEl) {
+                descInputEl.remove();
+            }
             
             if (editActions) {
                 const actionsEl = item.querySelector('.resource-actions');
@@ -590,9 +641,12 @@ function cancelEdit(fileId) {
     });
 }
 
-async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) {
-    // Se não mudou nada, apenas cancela
-    if (newTitle.trim() === originalTitle && newTags.trim() === originalTags) {
+async function saveEdit(fileId, newTitle, newTags, newDescription, originalTitle, originalTags, originalDescription) {
+    const nt = newTitle.trim();
+    const ntags = newTags.trim();
+    const ndesc = (newDescription || '').trim();
+    const odesc = (originalDescription || '').trim();
+    if (nt === originalTitle && ntags === originalTags && ndesc === odesc) {
         cancelEdit(fileId);
         return;
     }
@@ -615,15 +669,16 @@ async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) 
             method: "PUT",
             headers: headers,
             body: JSON.stringify({ 
-                title: newTitle.trim(), 
-                tags: newTags.trim() 
+                title: nt, 
+                tags: ntags,
+                description: ndesc || null
             })
         });
 
         if (!res.ok) {
             if (res.status === 401) {
                 if (await login()) {
-                    return saveEdit(fileId, newTitle, newTags, originalTitle, originalTags);
+                    return saveEdit(fileId, newTitle, newTags, newDescription, originalTitle, originalTags, originalDescription);
                 }
             }
             throw new Error("Erro ao atualizar recurso");
@@ -636,6 +691,7 @@ async function saveEdit(fileId, newTitle, newTags, originalTitle, originalTags) 
         if (fileIndex !== -1) {
             allFiles[fileIndex].title = data.title;
             allFiles[fileIndex].tags = data.tags;
+            allFiles[fileIndex].description = data.description;
         }
         
         // Recarrega a lista e estatísticas
@@ -852,6 +908,7 @@ async function loadFileStats() {
         // Elementos de estatísticas não encontrados
         return;
     }
+    if (!statImages) statImages = document.getElementById("stat-images");
 
     try {
         const headers = getAuthHeaders();
@@ -880,6 +937,7 @@ async function loadFileStats() {
         
         if (statPdfs) statPdfs.textContent = data.total_pdfs || 0;
         if (statGifs) statGifs.textContent = data.total_gifs || 0;
+        if (statImages) statImages.textContent = data.total_images || 0;
         if (statTotalSize) {
             statTotalSize.textContent = formatFileSize(data.total_size_bytes || 0);
         }
@@ -1112,7 +1170,137 @@ if (document.readyState === 'loading') {
     setupBackupButton();
 }
 
+function setupResourceUploadPanels() {
+    const tabSingle = document.getElementById("tab-upload-single");
+    const tabGroup = document.getElementById("tab-upload-group");
+    const panelSingle = document.querySelector('.upload-panel[data-panel="single"]');
+    const panelGroup = document.querySelector('.upload-panel[data-panel="group"]');
+    const groupInput = document.getElementById("group-file-input");
+    const groupDesc = document.getElementById("group-desc-container");
+    const formGroup = document.getElementById("upload-form-group");
+    const uploadGroupStatus = document.getElementById("upload-group-status");
+
+    function activateSingle() {
+        if (tabSingle) {
+            tabSingle.className = "flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 shadow-sm border border-gray-100";
+        }
+        if (tabGroup) {
+            tabGroup.className = "flex-1 py-2 text-xs font-semibold rounded-md text-gray-500 hover:text-gray-800";
+        }
+        if (panelSingle) panelSingle.classList.remove("hidden");
+        if (panelGroup) panelGroup.classList.add("hidden");
+    }
+
+    function activateGroup() {
+        if (tabGroup) {
+            tabGroup.className = "flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 shadow-sm border border-gray-100";
+        }
+        if (tabSingle) {
+            tabSingle.className = "flex-1 py-2 text-xs font-semibold rounded-md text-gray-500 hover:text-gray-800";
+        }
+        if (panelGroup) panelGroup.classList.remove("hidden");
+        if (panelSingle) panelSingle.classList.add("hidden");
+    }
+
+    if (tabSingle) tabSingle.addEventListener("click", activateSingle);
+    if (tabGroup) tabGroup.addEventListener("click", activateGroup);
+
+    function rebuildGroupDescFields(files) {
+        if (!groupDesc) return;
+        groupDesc.innerHTML = "";
+        if (!files || !files.length) return;
+        Array.from(files).forEach((file) => {
+            const wrap = document.createElement("div");
+            wrap.className = "rounded-lg border border-gray-200 bg-gray-50/50 p-2";
+            const lab = document.createElement("label");
+            lab.className = "block text-[10px] font-semibold text-gray-500 mb-1 truncate";
+            lab.textContent = "Descrição — " + file.name;
+            const ta = document.createElement("textarea");
+            ta.className = "group-file-desc w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-cyan-500 resize-y min-h-[48px] font-[inherit]";
+            ta.rows = 2;
+            ta.placeholder = "O que esta imagem ou GIF mostra (a IA usa na resposta)";
+            wrap.appendChild(lab);
+            wrap.appendChild(ta);
+            groupDesc.appendChild(wrap);
+        });
+    }
+
+    if (groupInput) {
+        groupInput.addEventListener("change", (e) => {
+            rebuildGroupDescFields(e.target.files);
+        });
+    }
+
+    if (formGroup) {
+        formGroup.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!uploadGroupStatus) return;
+            uploadGroupStatus.textContent = "";
+            uploadGroupStatus.classList.remove("error");
+
+            const gInput = document.getElementById("group-file-input");
+            const files = gInput && gInput.files ? gInput.files : null;
+            if (!files || !files.length) {
+                uploadGroupStatus.textContent = "Selecione pelo menos uma imagem ou GIF.";
+                uploadGroupStatus.classList.add("error");
+                return;
+            }
+
+            const title = (document.getElementById("group-title") && document.getElementById("group-title").value) || "";
+            const tags = (document.getElementById("group-tags") && document.getElementById("group-tags").value) || "";
+            const descEls = document.querySelectorAll("#group-desc-container .group-file-desc");
+            const descriptions = Array.from(descEls).map((el) => el.value || "");
+
+            const fd = new FormData();
+            Array.from(files).forEach((f) => fd.append("files", f));
+            fd.append("title", title);
+            fd.append("tags", tags);
+            fd.append("descriptions_json", JSON.stringify(descriptions));
+
+            uploadGroupStatus.textContent = "Enviando...";
+            try {
+                const headers = getAuthHeadersFormData();
+                const res = await fetch("/admin/files/upload-group", {
+                    method: "POST",
+                    headers: headers,
+                    body: fd,
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        window.location.href = "/login";
+                        return;
+                    }
+                    const err = await res.text();
+                    uploadGroupStatus.textContent = "Erro: " + (err || res.statusText);
+                    uploadGroupStatus.classList.add("error");
+                    return;
+                }
+                await res.json();
+                uploadGroupStatus.textContent = "Grupo adicionado com sucesso.";
+                formGroup.reset();
+                if (groupDesc) groupDesc.innerHTML = "";
+                await Promise.all([loadFiles(), loadFileStats()]);
+                setTimeout(() => { uploadGroupStatus.textContent = ""; }, 2500);
+            } catch (err) {
+                console.error(err);
+                uploadGroupStatus.textContent = "Erro ao enviar: " + (err.message || "falha");
+                uploadGroupStatus.classList.add("error");
+            }
+        });
+    }
+}
+
 // DRAG AND DROP FUNCTIONALITY
+function syncSingleUploadAccept() {
+    const sel = document.getElementById("file-type");
+    const fi = document.getElementById("file-input");
+    if (!sel || !fi) return;
+    const v = sel.value;
+    if (v === "pdf") fi.accept = ".pdf,application/pdf";
+    else if (v === "gif") fi.accept = ".gif,image/gif";
+    else fi.accept = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+}
+
 function setupDragAndDrop() {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -1120,8 +1308,19 @@ function setupDragAndDrop() {
     const filePreviewName = filePreview.querySelector('.file-preview-name');
     const filePreviewSize = filePreview.querySelector('.file-preview-size');
     const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+    const fileTypeSelect = document.getElementById('file-type');
 
     if (!dropZone || !fileInput) return;
+
+    syncSingleUploadAccept();
+    if (fileTypeSelect) {
+        fileTypeSelect.addEventListener('change', () => {
+            syncSingleUploadAccept();
+            fileInput.value = '';
+            if (filePreview) filePreview.style.display = 'none';
+            if (dropZoneContent) dropZoneContent.style.display = 'flex';
+        });
+    }
 
     // Click to select file — only when no file is selected yet
     dropZone.addEventListener('click', (e) => {
@@ -1173,10 +1372,14 @@ function setupDragAndDrop() {
     });
 
     function handleFileSelect(file) {
-        // Validate file type
-        const fileType = file.name.split('.').pop().toLowerCase();
-        if (fileType !== 'pdf' && fileType !== 'gif') {
-            alert('Por favor, selecione um arquivo PDF ou GIF.');
+        const ext = file.name.split('.').pop().toLowerCase();
+        const selectedType = document.getElementById('file-type')?.value || 'gif';
+        let ok = false;
+        if (selectedType === 'pdf' && ext === 'pdf') ok = true;
+        if (selectedType === 'gif' && ext === 'gif') ok = true;
+        if (selectedType === 'image' && ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) ok = true;
+        if (!ok) {
+            alert('O arquivo não corresponde ao tipo selecionado (PDF, GIF ou imagem PNG/JPG/WebP).');
             fileInput.value = '';
             return;
         }
@@ -1194,12 +1397,15 @@ function setupDragAndDrop() {
         filePreview.style.display = 'flex';
         dropZoneContent.style.display = 'none';
 
-        // Update file type select if needed
-        const fileTypeSelect = document.getElementById('file-type');
-        if (fileTypeSelect && fileType === 'pdf') {
+        if (fileTypeSelect && ext === 'pdf') {
             fileTypeSelect.value = 'pdf';
-        } else if (fileTypeSelect && fileType === 'gif') {
+            syncSingleUploadAccept();
+        } else if (fileTypeSelect && ext === 'gif') {
             fileTypeSelect.value = 'gif';
+            syncSingleUploadAccept();
+        } else if (fileTypeSelect && ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+            fileTypeSelect.value = 'image';
+            syncSingleUploadAccept();
         }
     }
 
@@ -1224,12 +1430,14 @@ if (document.readyState === 'loading') {
     // DOM ainda carregando, aguardando DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => {
         // DOMContentLoaded disparado
+        setupResourceUploadPanels();
         setupDragAndDrop();
         setupBackupButton();
         setupLogout();
         init();
     });
 } else {
+    setupResourceUploadPanels();
     setupDragAndDrop();
     setupBackupButton();
     setupLogout();

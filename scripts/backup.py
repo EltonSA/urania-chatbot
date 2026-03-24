@@ -107,11 +107,13 @@ def main():
         
         pdf_count = 0
         gif_count = 0
+        image_count = 0
         total_size = 0
         
         if upload_dir.exists():
             pdf_dir = upload_dir / "pdfs"
             gif_dir = upload_dir / "gifs"
+            image_dir = upload_dir / "images"
             
             if pdf_dir.exists():
                 pdf_count = len([f for f in pdf_dir.iterdir() if f.is_file()])
@@ -124,8 +126,14 @@ def main():
                 for f in gif_dir.iterdir():
                     if f.is_file():
                         total_size += f.stat().st_size
+
+            if image_dir.exists():
+                image_count = len([f for f in image_dir.iterdir() if f.is_file()])
+                for f in image_dir.iterdir():
+                    if f.is_file():
+                        total_size += f.stat().st_size
             
-            safe_print(f"   OK - {pdf_count} PDFs, {gif_count} GIFs ({total_size / 1024 / 1024:.2f} MB)")
+            safe_print(f"   OK - {pdf_count} PDFs, {gif_count} GIFs, {image_count} imagens ({total_size / 1024 / 1024:.2f} MB)")
         else:
             safe_print(f"   AVISO: Diretorio de uploads nao encontrado: {upload_dir}")
             upload_dir = None
@@ -154,6 +162,12 @@ def main():
                     for gif_file in gif_dir.iterdir():
                         if gif_file.is_file():
                             tar.add(gif_file, arcname=f"uploads/gifs/{gif_file.name}")
+
+                image_dir = upload_dir / "images"
+                if image_dir.exists():
+                    for img_file in image_dir.iterdir():
+                        if img_file.is_file():
+                            tar.add(img_file, arcname=f"uploads/images/{img_file.name}")
                 
                 safe_print("   OK - Arquivos de upload adicionados")
             
@@ -166,6 +180,7 @@ def main():
                 "uploads_included": upload_dir is not None and upload_dir.exists(),
                 "pdf_count": pdf_count,
                 "gif_count": gif_count,
+                "image_count": image_count,
                 "total_size_bytes": total_size
             }
             
@@ -186,7 +201,7 @@ def main():
         safe_print(f"Arquivo: {output_file.name}")
         safe_print(f"Tamanho: {final_size:.2f} MB")
         safe_print(f"Banco de dados: {'Incluido' if db_path and db_path.exists() else 'Nao encontrado'}")
-        safe_print(f"Documentos: {pdf_count} PDFs, {gif_count} GIFs")
+        safe_print(f"Documentos: {pdf_count} PDFs, {gif_count} GIFs, {image_count} imagens")
         safe_print("")
         safe_print(f"Para restaurar: python scripts/restore.py {output_file.name}")
         safe_print("=" * 60)

@@ -49,6 +49,27 @@ def get_db():
         db.close()
 
 
+def _migrate_sqlite_files_columns():
+    """Adiciona colunas novas em `files` em bancos SQLite já existentes."""
+    if "sqlite" not in str(engine.url).lower():
+        return
+    from sqlalchemy import inspect, text
+    try:
+        insp = inspect(engine)
+        if not insp.has_table("files"):
+            return
+        cols = {c["name"] for c in insp.get_columns("files")}
+        with engine.begin() as conn:
+            if "description" not in cols:
+                conn.execute(text("ALTER TABLE files ADD COLUMN description TEXT"))
+                logger.info("Migração: coluna files.description adicionada")
+            if "group_id" not in cols:
+                conn.execute(text("ALTER TABLE files ADD COLUMN group_id VARCHAR(64)"))
+                logger.info("Migração: coluna files.group_id adicionada")
+    except Exception as e:
+        logger.warning("Migração SQLite files: %s", e)
+
+
 def init_db():
     """
     Inicializa o banco de dados criando todas as tabelas.
@@ -59,6 +80,7 @@ def init_db():
     from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel, AuditLogModel
     try:
         Base.metadata.create_all(bind=engine, checkfirst=True)
+        _migrate_sqlite_files_columns()
         logger.info("Banco de dados verificado e tabelas criadas (se necessário)")
     except OperationalError as e:
         if "already exists" in str(e).lower():

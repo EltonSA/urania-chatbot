@@ -2,14 +2,14 @@
 Rotas do chat
 """
 import json
-from typing import List
+from typing import List, Set
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from openai import OpenAI
 import logging
 
 from app.database import get_db
-from app.schemas import ChatRequest, ChatResponse, AttachmentOut, FeedbackBody
+from app.schemas import ChatRequest, ChatResponse, AttachmentOut, FeedbackBody, ReplyStepOut
 from app.utils import (
     get_or_create_session,
     ensure_chat_started_on_first_user_message,
@@ -17,7 +17,8 @@ from app.utils import (
     search_relevant_files,
     build_system_prompt,
     build_file_url,
-    get_setting
+    get_setting,
+    expand_attachment_files,
 )
 from app.models import FileModel, ChatEventModel
 from app.config import settings
@@ -25,6 +26,51 @@ from app.openai_status import get_status, is_available, set_status
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 logger = logging.getLogger(__name__)
+
+
+def _resolve_raw_attachments(
+    db: Session,
+    session_id: str,
+    raw_attachments: list,
+    seen_attachment_ids: Set[int],
+    *,
+    expand_groups: bool = True,
+) -> List[AttachmentOut]:
+    """
+    expand_groups: em reply_steps deve ser False — cada passo é um único arquivo;
+    senão um file_id de grupo (imagem/GIF) viraria várias mídias no mesmo passo.
+    """
+    out: List[AttachmentOut] = []
+    for att in raw_attachments:
+        if not isinstance(att, dict):
+            continue
+        file_id = att.get("file_id")
+        att_type = att.get("type")
+        name = att.get("name")
+        if file_id is None or att_type not in ("pdf", "gif", "image"):
+            continue
+        try:
+            file = db.query(FileModel).get(int(file_id))
+            if not file or file.file_type != att_type:
+                continue
+            expanded = expand_attachment_files(db, file) if expand_groups else [file]
+            for i, frow in enumerate(expanded):
+                if frow.id in seen_attachment_ids:
+                    continue
+                seen_attachment_ids.add(frow.id)
+                url = build_file_url(frow)
+                disp_name = (name or frow.title) if i == 0 else frow.title
+                out.append(AttachmentOut(type=frow.file_type, url=url, name=disp_name))
+                if frow.file_type == "pdf":
+                    log_event(db, session_id, "pdf_sent", content=str(frow.id))
+                elif frow.file_type == "gif":
+                    log_event(db, session_id, "gif_sent", content=str(frow.id))
+                elif frow.file_type == "image":
+                    log_event(db, session_id, "image_sent", content=str(frow.id))
+        except (ValueError, TypeError) as e:
+            logger.warning("Erro ao processar anexo: %s", e)
+            continue
+    return out
 
 
 @router.get("/status")
@@ -66,7 +112,9 @@ def chat_status(db: Session = Depends(get_db)):
     
     if settings.WHATSAPP_NUMBER:
         status["whatsapp_number"] = settings.WHATSAPP_NUMBER
-    
+
+    status["satisfaction_support_enabled"] = get_setting(db, "satisfaction_support_button") != "false"
+
     allowed = settings.widget_allowed_origins_list
     if allowed:
         status["allowed_origins"] = allowed
@@ -193,46 +241,50 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
 
     reply_text = data.get("reply", "") or ""
     raw_attachments = data.get("attachments", []) or []
+    raw_reply_steps = data.get("reply_steps")
     should_ask_resolution = bool(data.get("should_ask_resolution", False))
     needs_human_support = bool(data.get("needs_human_support", False))
 
-    log_event(db, session_id, "bot_message", content=reply_text)
+    seen_ids: Set[int] = set()
+    reply_steps_out: List[ReplyStepOut] = []
 
-    # Se precisa de suporte humano, registra o evento
-    if needs_human_support:
-        log_event(db, session_id, "support_redirected")
+    if isinstance(raw_reply_steps, list) and len(raw_reply_steps) > 0:
+        for step in raw_reply_steps:
+            if not isinstance(step, dict):
+                continue
+            st_text = step.get("text")
+            st_text = (st_text if isinstance(st_text, str) else "") or ""
+            st_raw = step.get("attachments")
+            if not isinstance(st_raw, list):
+                st_raw = []
+            # Um anexo por passo (texto → imagem → texto → imagem no cliente)
+            if len(st_raw) > 1:
+                st_raw = st_raw[:1]
+            resolved = _resolve_raw_attachments(
+                db, session_id, st_raw, seen_ids, expand_groups=False
+            )
+            if st_text.strip() or resolved:
+                reply_steps_out.append(ReplyStepOut(text=st_text.strip(), attachments=resolved))
 
     attachments_out: List[AttachmentOut] = []
+    if reply_steps_out:
+        attachments_out = []
+    else:
+        attachments_out = _resolve_raw_attachments(db, session_id, raw_attachments, seen_ids)
 
-    for att in raw_attachments:
-        file_id = att.get("file_id")
-        att_type = att.get("type")
-        name = att.get("name")
+    step_texts = [s.text for s in reply_steps_out if s.text]
+    log_content_parts = [p for p in [reply_text.strip()] + step_texts if p]
+    log_event(db, session_id, "bot_message", content="\n\n".join(log_content_parts) if log_content_parts else reply_text)
 
-        if file_id is None or att_type not in ("pdf", "gif"):
-            continue
-
-        try:
-            file = db.query(FileModel).get(int(file_id))
-            if not file or file.file_type != att_type:
-                continue
-
-            url = build_file_url(file)
-            attachments_out.append(AttachmentOut(type=att_type, url=url, name=name or file.title))
-
-            if att_type == "pdf":
-                log_event(db, session_id, "pdf_sent", content=str(file.id))
-            elif att_type == "gif":
-                log_event(db, session_id, "gif_sent", content=str(file.id))
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Erro ao processar anexo: {e}")
-            continue
+    if needs_human_support:
+        log_event(db, session_id, "support_redirected")
 
     return ChatResponse(
         reply=reply_text,
         attachments=attachments_out,
+        reply_steps=reply_steps_out,
         should_ask_resolution=should_ask_resolution,
-        needs_human_support=needs_human_support
+        needs_human_support=needs_human_support,
     )
 
 
@@ -243,53 +295,63 @@ def feedback(body: FeedbackBody, db: Session = Depends(get_db)):
     Agora registra cada feedback como um evento separado, permitindo múltiplos feedbacks por sessão
     """
     from app.models import ChatSessionModel
-    
-    # Garante que a sessão existe (cria se não existir)
+    from datetime import datetime
+
     session_id = get_or_create_session(db, body.session_id)
     s = db.query(ChatSessionModel).filter_by(session_id=session_id).first()
-    
+
     if not s:
-        # Se ainda não existir após get_or_create_session, cria manualmente
         s = ChatSessionModel(session_id=session_id)
         db.add(s)
         db.commit()
         db.refresh(s)
 
-    # Atualiza o último feedback da sessão (para compatibilidade)
+    if body.action == "support":
+        if get_setting(db, "satisfaction_support_button") == "false":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solicitação de suporte por este botão está desativada.",
+            )
+        s.resolved = None
+        s.last_activity_at = datetime.utcnow()
+        log_event(db, session_id, "feedback_support")
+        log_event(db, session_id, "support_redirected")
+        db.commit()
+        return {"ok": True}
+
     s.resolved = 1 if body.resolved else 0
-    from datetime import datetime
     s.last_activity_at = datetime.utcnow()
-    
-    # REGISTRA CADA FEEDBACK COMO UM EVENTO SEPARADO
-    # Isso permite contar todos os feedbacks, mesmo na mesma sessão
+
     event_type = "feedback_yes" if body.resolved else "feedback_no"
     log_event(db, session_id, event_type)
-    
-    # Se não resolveu, registra qual arquivo foi enviado antes do feedback
-    if not body.resolved:
-        # Busca o último PDF ou GIF enviado nesta sessão
-        last_pdf = db.query(ChatEventModel).filter_by(
-            session_id=session_id, 
-            event_type="pdf_sent"
-        ).order_by(ChatEventModel.created_at.desc()).first()
-        
-        last_gif = db.query(ChatEventModel).filter_by(
-            session_id=session_id, 
-            event_type="gif_sent"
-        ).order_by(ChatEventModel.created_at.desc()).first()
-        
-        # Determina qual foi o último arquivo enviado
-        last_file = None
-        if last_pdf and last_gif:
-            last_file = last_pdf if last_pdf.created_at > last_gif.created_at else last_gif
-        elif last_pdf:
-            last_file = last_pdf
-        elif last_gif:
-            last_file = last_gif
-        
-        if last_file:
+
+    last_pdf = (
+        db.query(ChatEventModel)
+        .filter_by(session_id=session_id, event_type="pdf_sent")
+        .order_by(ChatEventModel.created_at.desc())
+        .first()
+    )
+    last_gif = (
+        db.query(ChatEventModel)
+        .filter_by(session_id=session_id, event_type="gif_sent")
+        .order_by(ChatEventModel.created_at.desc())
+        .first()
+    )
+    last_image = (
+        db.query(ChatEventModel)
+        .filter_by(session_id=session_id, event_type="image_sent")
+        .order_by(ChatEventModel.created_at.desc())
+        .first()
+    )
+    candidates = [x for x in (last_pdf, last_gif, last_image) if x is not None]
+    last_file = max(candidates, key=lambda x: x.created_at) if candidates else None
+
+    if last_file:
+        if body.resolved:
+            log_event(db, session_id, "file_resolved", content=last_file.content)
+        else:
             log_event(db, session_id, "file_not_resolved", content=last_file.content)
-    
+
     db.commit()
     return {"ok": True}
 
