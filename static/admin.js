@@ -248,56 +248,35 @@ try {
 }
 }
 
-function renderFiles(files, searchTerm = "") {
-    if (!filesList) return;
+function sortFilesByIdAsc(arr) {
+    return [...arr].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+}
 
-    // Filtra por tipo primeiro
-    let filteredFiles = files;
-    if (currentTypeFilter !== "all") {
-        filteredFiles = files.filter(f => 
-            (f.file_type || "").toLowerCase() === currentTypeFilter.toLowerCase()
-        );
-    }
+/** Cartão de um recurso; em pastas use nested + hideGroupBadge para não repetir o selo "Grupo". */
+function buildResourceItemElement(f, options) {
+    const opts = options || {};
+    const nested = !!opts.nested;
+    const hideGroupBadge = !!opts.hideGroupBadge;
+    const standalone = !!opts.standalone && !nested;
 
-    // Depois filtra por termo de busca
-    if (searchTerm) {
-        filteredFiles = filteredFiles.filter(f => {
-            const title = (f.title || "").toLowerCase();
-            const tags = (f.tags || "").toLowerCase();
-            const desc = (f.description || "").toLowerCase();
-            return title.includes(searchTerm) || tags.includes(searchTerm) || desc.includes(searchTerm);
-        });
-    }
-
-    filesList.innerHTML = "";
-
-    if (!filteredFiles || filteredFiles.length === 0) {
-        // Nenhum arquivo encontrado
-        if (filesEmpty) {
-            filesEmpty.textContent = searchTerm 
-                ? `Nenhum recurso encontrado para "${searchTerm}"`
-                : "Nenhum recurso cadastrado ainda.";
-            filesEmpty.style.display = "block";
-        }
-        if (filesList) filesList.style.display = "none";
-        return;
-    }
-
-    // Renderizando arquivos
-    if (filesEmpty) filesEmpty.style.display = "none";
-    if (filesList) filesList.style.display = "grid";
-
-    filteredFiles.forEach(f => {
     const item = document.createElement("div");
-    item.className = "resource-item";
-    item.dataset.fileId = f.id; // Adiciona ID para facilitar busca
+    let itemClass = "resource-item" + (nested ? " resource-item-nested" : "");
+    if (standalone) {
+        itemClass += " resource-item--standalone";
+        const ft0 = (f.file_type || "").toLowerCase();
+        if (ft0 === "image") itemClass += " resource-item--standalone-img";
+        else if (ft0 === "gif") itemClass += " resource-item--standalone-gif";
+        else if (ft0 === "pdf") itemClass += " resource-item--standalone-pdf";
+    }
+    item.className = itemClass;
+    item.dataset.fileId = f.id;
 
-    const iconExtra = f.file_type === "pdf" ? "pdf" : f.file_type === "image" ? "image" : "";
-    const iconSvg = f.file_type === "pdf"
+    const ft = (f.file_type || "").toLowerCase();
+    const iconExtra = ft === "pdf" ? "pdf" : ft === "image" ? "image" : ft === "gif" ? "gif" : "";
+    const iconSvg = ft === "pdf"
         ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
         : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
 
-    // Header com ícone e informações principais
     const header = document.createElement("div");
     header.className = "resource-item-header";
 
@@ -312,14 +291,13 @@ function renderFiles(files, searchTerm = "") {
     const titleRow = document.createElement("div");
     titleRow.className = "resource-header";
 
-    // Tipo primeiro (mais destaque)
     const typePill = document.createElement("span");
-    typePill.className = "resource-type-pill " + (f.file_type === "pdf" ? "pdf" : f.file_type === "image" ? "image" : "");
-    const typeLabel = f.file_type === "image" ? "IMAGEM" : f.file_type.toUpperCase();
+    typePill.className = "resource-type-pill " + (ft === "pdf" ? "pdf" : ft === "image" ? "image" : ft === "gif" ? "gif" : "");
+    const typeLabel = ft === "image" ? "IMAGEM" : (f.file_type || "").toUpperCase();
     typePill.textContent = typeLabel;
     titleRow.appendChild(typePill);
 
-    if (f.group_id) {
+    if (f.group_id && !hideGroupBadge) {
         const gb = document.createElement("span");
         gb.className = "resource-group-badge";
         gb.textContent = "Grupo";
@@ -327,7 +305,6 @@ function renderFiles(files, searchTerm = "") {
         titleRow.appendChild(gb);
     }
 
-    // Título depois
     const title = document.createElement("div");
     title.className = "resource-title";
     title.textContent = f.title || "(sem título)";
@@ -352,7 +329,6 @@ function renderFiles(files, searchTerm = "") {
     header.appendChild(info);
     item.appendChild(header);
 
-    // Ações
     const actions = document.createElement("div");
     actions.className = "resource-actions";
 
@@ -378,9 +354,296 @@ function renderFiles(files, searchTerm = "") {
     actions.appendChild(btnDelete);
 
     item.appendChild(actions);
+    return item;
+}
 
-    filesList.appendChild(item);
+function appendResourceOrganizeSection(title, subtitle, bodyEl) {
+    const section = document.createElement("section");
+    section.className = "resource-organize-section";
+    const head = document.createElement("div");
+    head.className = "resource-section-head";
+    const h3 = document.createElement("h3");
+    h3.className = "resource-section-title";
+    h3.textContent = title;
+    head.appendChild(h3);
+    if (subtitle) {
+        const p = document.createElement("p");
+        p.className = "resource-section-sub";
+        p.textContent = subtitle;
+        head.appendChild(p);
+    }
+    section.appendChild(head);
+    section.appendChild(bodyEl);
+    filesList.appendChild(section);
+}
+
+/**
+ * Sub-secção dentro de Imagens/GIFs/PDF: separa visualmente pastas (grupos) de ficheiros únicos.
+ * kind: groups | groups-gif | standalone-image | standalone-gif | groups-mixed | pdf-list
+ */
+function createResourceSubblock(kind, title, hint) {
+    const wrap = document.createElement("div");
+    wrap.className = "resource-subblock resource-subblock--" + kind;
+    const head = document.createElement("div");
+    head.className = "resource-subblock-head";
+    const h4 = document.createElement("h4");
+    h4.className = "resource-subblock-title";
+    h4.textContent = title;
+    const hintEl = document.createElement("p");
+    hintEl.className = "resource-subblock-hint";
+    hintEl.textContent = hint;
+    head.appendChild(h4);
+    head.appendChild(hintEl);
+    const body = document.createElement("div");
+    body.className = "resource-subblock-body";
+    wrap.appendChild(head);
+    wrap.appendChild(body);
+    return { wrap, body };
+}
+
+function getMediaFilesFromCatalog(catalog) {
+    return catalog.filter(f => f.file_type === "image" || f.file_type === "gif");
+}
+
+/** Tipo real do grupo (usa `catalog` completo, ex. allFiles) para o filtro não partir grupos mistos. */
+function classifyGroupKind(groupId, catalog) {
+    const files = getMediaFilesFromCatalog(catalog).filter(f => f.group_id === groupId);
+    const hasImage = files.some(f => f.file_type === "image");
+    const hasGif = files.some(f => f.file_type === "gif");
+    if (hasImage && hasGif) return "mixed";
+    if (hasGif) return "gif";
+    return "image";
+}
+
+function sortGroupIdsInPlace(gids, groupedMap) {
+    gids.sort((a, b) => {
+        const minA = Math.min(...groupedMap.get(a).map(x => x.id));
+        const minB = Math.min(...groupedMap.get(b).map(x => x.id));
+        return minA - minB;
     });
+}
+
+const FOLDER_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+
+/** Pasta de grupo: `folderKind` image | gif | mixed (ícone/cor). */
+function createGroupFolderDetails(groupFiles, folderKind) {
+    const files = sortFilesByIdAsc(groupFiles);
+    let groupLabel = "(sem título)";
+    for (let gi = 0; gi < files.length; gi++) {
+        const t = (files[gi].title || "").trim();
+        if (t) {
+            groupLabel = t;
+            break;
+        }
+    }
+    const fk = folderKind === "gif" || folderKind === "image" || folderKind === "mixed" ? folderKind : "mixed";
+    const details = document.createElement("details");
+    details.className = "resource-folder";
+    details.open = true;
+    const sum = document.createElement("summary");
+    const tit = document.createElement("div");
+    tit.className = "resource-folder-title";
+    const ic = document.createElement("div");
+    ic.className = "resource-folder-icon resource-folder-icon--" + fk;
+    ic.innerHTML = FOLDER_SVG;
+    const span = document.createElement("span");
+    span.className = "resource-folder-name";
+    span.textContent = groupLabel;
+    span.title = groupLabel;
+    tit.appendChild(ic);
+    tit.appendChild(span);
+    const meta = document.createElement("span");
+    meta.className = "resource-folder-meta";
+    meta.textContent = files.length + " arquivo" + (files.length !== 1 ? "s" : "");
+    sum.appendChild(tit);
+    sum.appendChild(meta);
+    const inner = document.createElement("div");
+    inner.className = "resource-folder-items";
+    files.forEach(f => inner.appendChild(buildResourceItemElement(f, { nested: true, hideGroupBadge: true })));
+    details.appendChild(sum);
+    details.appendChild(inner);
+    return details;
+}
+
+function renderFiles(files, searchTerm = "") {
+    if (!filesList) return;
+
+    let filteredFiles = files;
+    if (currentTypeFilter !== "all") {
+        filteredFiles = files.filter(f =>
+            (f.file_type || "").toLowerCase() === currentTypeFilter.toLowerCase()
+        );
+    }
+
+    const st = (searchTerm || "").toLowerCase().trim();
+    if (st) {
+        filteredFiles = filteredFiles.filter(f => {
+            const title = (f.title || "").toLowerCase();
+            const tags = (f.tags || "").toLowerCase();
+            const desc = (f.description || "").toLowerCase();
+            return title.includes(st) || tags.includes(st) || desc.includes(st);
+        });
+    }
+
+    filesList.innerHTML = "";
+
+    if (!filteredFiles || filteredFiles.length === 0) {
+        if (filesEmpty) {
+            filesEmpty.textContent = st
+                ? `Nenhum recurso encontrado para "${searchTerm}"`
+                : "Nenhum recurso cadastrado ainda.";
+            filesEmpty.style.display = "block";
+        }
+        if (filesList) filesList.style.display = "none";
+        return;
+    }
+
+    if (filesEmpty) filesEmpty.style.display = "none";
+    filesList.style.display = "flex";
+    filesList.className = "resource-list resource-list-organized";
+
+    const catalog = allFiles;
+    const showPdf = currentTypeFilter === "all" || currentTypeFilter === "pdf";
+    const showImageBlock = currentTypeFilter === "all" || currentTypeFilter === "image";
+    const showGifBlock = currentTypeFilter === "all" || currentTypeFilter === "gif";
+
+    const pdfs = sortFilesByIdAsc(filteredFiles.filter(f => f.file_type === "pdf"));
+    const mediaOnly = filteredFiles.filter(f => f.file_type === "image" || f.file_type === "gif");
+
+    const groupedMap = new Map();
+    for (const f of mediaOnly) {
+        if (!f.group_id) continue;
+        if (!groupedMap.has(f.group_id)) groupedMap.set(f.group_id, []);
+        groupedMap.get(f.group_id).push(f);
+    }
+    for (const arr of groupedMap.values()) {
+        sortFilesByIdAsc(arr);
+    }
+
+    const groupIdsPresent = [...groupedMap.keys()];
+    const imageOnlyGids = [];
+    const gifOnlyGids = [];
+    const mixedGids = [];
+    for (const gid of groupIdsPresent) {
+        const kind = classifyGroupKind(gid, catalog);
+        if (kind === "mixed") mixedGids.push(gid);
+        else if (kind === "gif") gifOnlyGids.push(gid);
+        else imageOnlyGids.push(gid);
+    }
+    sortGroupIdsInPlace(imageOnlyGids, groupedMap);
+    sortGroupIdsInPlace(gifOnlyGids, groupedMap);
+    sortGroupIdsInPlace(mixedGids, groupedMap);
+
+    const ungroupedImages = sortFilesByIdAsc(mediaOnly.filter(f => !f.group_id && f.file_type === "image"));
+    const ungroupedGifs = sortFilesByIdAsc(mediaOnly.filter(f => !f.group_id && f.file_type === "gif"));
+
+    if (showPdf && pdfs.length > 0) {
+        const list = document.createElement("div");
+        list.className = "resource-section-list resource-section-list--split";
+        const sb = createResourceSubblock("pdf-list", "Lista de PDFs", "Cada cartão é um documento enviado em separado.");
+        pdfs.forEach(f => sb.body.appendChild(buildResourceItemElement(f, { nested: false, hideGroupBadge: true, standalone: true })));
+        list.appendChild(sb.wrap);
+        appendResourceOrganizeSection("Documentos PDF", "Secção só de PDFs; abaixo, imagens e GIFs têm grupos e ficheiros únicos bem distintos.", list);
+    }
+
+    if (showImageBlock) {
+        const list = document.createElement("div");
+        list.className = "resource-section-list resource-section-list--split";
+        const hasImageGroups = imageOnlyGids.length > 0 || (currentTypeFilter === "image" && mixedGids.length > 0);
+        if (hasImageGroups) {
+            const sb = createResourceSubblock(
+                "groups",
+                "Grupos (pastas)",
+                "Vários ficheiros no mesmo envio — expanda para ver cada imagem."
+            );
+            imageOnlyGids.forEach(gid => sb.body.appendChild(createGroupFolderDetails(groupedMap.get(gid), "image")));
+            if (currentTypeFilter === "image") {
+                mixedGids.forEach(gid => sb.body.appendChild(createGroupFolderDetails(groupedMap.get(gid), "mixed")));
+            }
+            list.appendChild(sb.wrap);
+        }
+        if (ungroupedImages.length > 0) {
+            const sb = createResourceSubblock(
+                "standalone-image",
+                "Ficheiros únicos",
+                "Um único ficheiro por envio, sem pasta — não pertence a um grupo."
+            );
+            ungroupedImages.forEach(f =>
+                sb.body.appendChild(buildResourceItemElement(f, { nested: false, hideGroupBadge: true, standalone: true }))
+            );
+            list.appendChild(sb.wrap);
+        }
+        if (list.children.length > 0) {
+            appendResourceOrganizeSection(
+                "Imagens",
+                "Imagens estáticas. Com «Todos» ativo, grupos só de imagem ficam aqui; envios imagem+GIF em «Grupos mistos».",
+                list
+            );
+        }
+    }
+
+    if (showGifBlock) {
+        const list = document.createElement("div");
+        list.className = "resource-section-list resource-section-list--split";
+        const hasGifGroups = gifOnlyGids.length > 0 || (currentTypeFilter === "gif" && mixedGids.length > 0);
+        if (hasGifGroups) {
+            const sb = createResourceSubblock(
+                "groups-gif",
+                "Grupos (pastas)",
+                "Vários GIFs no mesmo envio — expanda para listar cada um."
+            );
+            gifOnlyGids.forEach(gid => sb.body.appendChild(createGroupFolderDetails(groupedMap.get(gid), "gif")));
+            if (currentTypeFilter === "gif") {
+                mixedGids.forEach(gid => sb.body.appendChild(createGroupFolderDetails(groupedMap.get(gid), "mixed")));
+            }
+            list.appendChild(sb.wrap);
+        }
+        if (ungroupedGifs.length > 0) {
+            const sb = createResourceSubblock(
+                "standalone-gif",
+                "Ficheiros únicos",
+                "Um único GIF por envio, sem pasta — não pertence a um grupo."
+            );
+            ungroupedGifs.forEach(f =>
+                sb.body.appendChild(buildResourceItemElement(f, { nested: false, hideGroupBadge: true, standalone: true }))
+            );
+            list.appendChild(sb.wrap);
+        }
+        if (list.children.length > 0) {
+            appendResourceOrganizeSection(
+                "GIFs",
+                "GIFs animados. Com «Todos» ativo, grupos só de GIF ficam aqui; envios mistos em «Grupos mistos».",
+                list
+            );
+        }
+    }
+
+    if (currentTypeFilter === "all" && mixedGids.length > 0) {
+        const list = document.createElement("div");
+        list.className = "resource-section-list resource-section-list--split";
+        const sb = createResourceSubblock(
+            "groups-mixed",
+            "Pastas (imagem + GIF)",
+            "O mesmo título de envio; a ordem abaixo é a usada no chat."
+        );
+        mixedGids.forEach(gid => sb.body.appendChild(createGroupFolderDetails(groupedMap.get(gid), "mixed")));
+        list.appendChild(sb.wrap);
+        appendResourceOrganizeSection(
+            "Grupos mistos (imagens e GIFs)",
+            "Só aparece na vista «Todos». Separa-se de grupos só-imagem e só-GIF.",
+            list
+        );
+    }
+
+    if (filesList.children.length === 0) {
+        if (filesEmpty) {
+            filesEmpty.textContent = st
+                ? `Nenhum recurso encontrado para "${searchTerm}"`
+                : "Nenhum recurso cadastrado ainda.";
+            filesEmpty.style.display = "block";
+        }
+        filesList.style.display = "none";
+    }
 }
 
 function filterFiles(searchTerm) {

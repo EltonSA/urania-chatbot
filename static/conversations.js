@@ -94,9 +94,9 @@
   }
 
   function resolvedLabel(v) {
-    if (v === 1) return "Sim (resolveu)";
-    if (v === 0) return "Não resolveu";
-    return "Sem resposta";
+    if (v === 1) return "Resolveu SIM";
+    if (v === 0) return "Resolveu NÃO";
+    return "Resolveu S/R";
   }
 
   async function fetchList() {
