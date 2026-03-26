@@ -340,15 +340,22 @@
     return sessionId;
   }
 
+  function notifyParentMediaModal(open){
+    if(!isEmbedded) return;
+    notifyParent("ucw-media-modal", { open: !!open });
+  }
+
   function openGifModal(url, name){
     gifModalImg.src = url;
     gifModalCaption.textContent = name || "Pré-visualização do GIF";
     gifModal.classList.add("open");
+    notifyParentMediaModal(true);
   }
   function closeGifModal(){
     gifModal.classList.remove("open");
     gifModalImg.src = "";
     gifModalCaption.textContent = "";
+    notifyParentMediaModal(false);
   }
   gifModalClose.addEventListener("click", closeGifModal);
   gifModal.addEventListener("click", (e)=>{ if(e.target === gifModal) closeGifModal(); });
@@ -358,13 +365,21 @@
     pdfModalDownload.href = url;
     pdfModalDownload.download = name || "arquivo.pdf";
     pdfModal.classList.add("open");
+    notifyParentMediaModal(true);
   }
   function closePdfModal(){
     pdfModal.classList.remove("open");
     pdfModalFrame.src = "";
+    notifyParentMediaModal(false);
   }
   pdfModalClose.addEventListener("click", closePdfModal);
   pdfModal.addEventListener("click", (e)=>{ if(e.target === pdfModal) closePdfModal(); });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    if(gifModal.classList.contains("open")){ e.preventDefault(); closeGifModal(); return; }
+    if(pdfModal.classList.contains("open")){ e.preventDefault(); closePdfModal(); return; }
+  });
 
   function messagesBubbleWidthCap(){
     const messagesEl = document.getElementById("chat-messages");

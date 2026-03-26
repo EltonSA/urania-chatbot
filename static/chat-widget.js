@@ -312,6 +312,8 @@
   var isOpen = false;
   var isMin = false;
   var isFull = false;
+  /** True se entramos em tela cheia automaticamente ao abrir imagem/GIF/PDF no iframe (para restaurar ao fechar o modal). */
+  var mediaModalFullscreen = false;
 
   /**
    * Sempre novo _cb: o browser cacheava o /widget no iframe e a mensagem/tema não atualizavam.
@@ -374,6 +376,7 @@
 
   function exitFull() {
     isFull = false;
+    mediaModalFullscreen = false;
     $.win.classList.remove('full');
     $.trig.classList.remove('hidden');
     document.documentElement.classList.remove('ucw-noscroll');
@@ -465,6 +468,22 @@
       if (e.data.type === 'ucw-new-message' && !isOpen) {
         $.badge.textContent = '!';
         $.badge.classList.add('show');
+      }
+      if (e.data.type === 'ucw-media-modal') {
+        if (e.data.open === true) {
+          if (!isFull) {
+            goFull();
+            mediaModalFullscreen = true;
+          } else {
+            mediaModalFullscreen = false;
+          }
+        } else if (e.data.open === false) {
+          if (mediaModalFullscreen && isFull) {
+            exitFull();
+          } else {
+            mediaModalFullscreen = false;
+          }
+        }
       }
     });
   }
