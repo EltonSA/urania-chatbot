@@ -127,6 +127,10 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = Field(default=True, description="Habilitar rate limiting")
     RATE_LIMIT_REQUESTS: int = Field(default=100, description="Número de requisições por minuto")
+    TRUST_FORWARDED_HEADERS: bool = Field(
+        default=True,
+        description="Usar X-Forwarded-For / X-Real-IP para IP do cliente (proxy reverso). Desligar só em dev sem proxy se precisar ignorar cabeçalhos.",
+    )
     
     # Logging
     LOG_LEVEL: str = Field(default="INFO", description="Nível de log")

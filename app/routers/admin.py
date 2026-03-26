@@ -27,6 +27,7 @@ from app.utils import (
 )
 from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogModel
 from app.config import settings
+from app.client_ip import get_client_ip
 from app.date_range import parse_stats_date_range
 from app.chat_theme import load_merged_chat_theme, save_chat_theme_partial, reset_chat_theme
 from app.chat_welcome import (
@@ -222,7 +223,7 @@ def save_prompt(
     saved_prompt = get_setting(db, "system_prompt")
     logger.info(f"Prompt salvo confirmado: {len(saved_prompt) if saved_prompt else 0} caracteres")
     
-    log_audit(db, "prompt_updated", "config", f"Prompt atualizado ({len(body.prompt or '')} caracteres)", user=current_user.get("sub"), ip=request.client.host if request.client else None)
+    log_audit(db, "prompt_updated", "config", f"Prompt atualizado ({len(body.prompt or '')} caracteres)", user=current_user.get("sub"), ip=get_client_ip(request))
     
     return {"ok": True}
 
@@ -362,7 +363,7 @@ def save_system_settings(
                         "config",
                         json.dumps(partial, ensure_ascii=False)[:400],
                         user=current_user.get("sub"),
-                        ip=request.client.host if request.client else None,
+                        ip=get_client_ip(request),
                     )
             except ValueError as ve:
                 raise HTTPException(
@@ -382,7 +383,7 @@ def save_system_settings(
                     "config",
                     (after or "")[:400],
                     user=current_user.get("sub"),
-                    ip=request.client.host if request.client else None,
+                    ip=get_client_ip(request),
                 )
         except ValueError as ve:
             raise HTTPException(
@@ -391,7 +392,7 @@ def save_system_settings(
             )
 
     if changes:
-        log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=request.client.host if request.client else None)
+        log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=get_client_ip(request))
     return {"ok": True}
 
 
@@ -445,7 +446,7 @@ async def upload_branding_favicon(
         "config",
         out_name,
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True, "filename": out_name}
 
@@ -474,7 +475,7 @@ def delete_branding_favicon(
             "config",
             ", ".join(removed),
             user=current_user.get("sub"),
-            ip=request.client.host if request.client else None,
+            ip=get_client_ip(request),
         )
     return {"ok": True}
 
@@ -539,7 +540,7 @@ async def upload_branding_logo(
         "config",
         out_name,
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True, "filename": out_name}
 
@@ -568,7 +569,7 @@ def delete_branding_logo(
             "config",
             ", ".join(removed),
             user=current_user.get("sub"),
-            ip=request.client.host if request.client else None,
+            ip=get_client_ip(request),
         )
     return {"ok": True}
 
@@ -608,7 +609,7 @@ async def upload_branding_chat_avatar(
         "config",
         out_name,
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True, "filename": out_name}
 
@@ -637,7 +638,7 @@ def delete_branding_chat_avatar(
             "config",
             ", ".join(removed),
             user=current_user.get("sub"),
-            ip=request.client.host if request.client else None,
+            ip=get_client_ip(request),
         )
     return {"ok": True}
 
@@ -656,7 +657,7 @@ def reset_chat_theme_admin(
         "config",
         "Tema do chat restaurado ao padrão",
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True}
 
@@ -675,7 +676,7 @@ def reset_chat_welcome_admin(
         "config",
         "Mensagem inicial do chat restaurada ao padrão",
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True}
 
@@ -860,7 +861,7 @@ def create_backup(
         latest_backup = backup_files[0]
         
         logger.info(f"Backup criado com sucesso: {latest_backup.name}")
-        log_audit(db, "backup_created", "sistema", f"Backup: {latest_backup.name}", user=current_user.get("sub"), ip=request.client.host if request.client else None)
+        log_audit(db, "backup_created", "sistema", f"Backup: {latest_backup.name}", user=current_user.get("sub"), ip=get_client_ip(request))
         
         return FileResponse(
             path=str(latest_backup),

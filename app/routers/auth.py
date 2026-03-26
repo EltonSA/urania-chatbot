@@ -12,6 +12,7 @@ from app.auth import authenticate_user, create_access_token
 from app.config import settings
 from app.database import get_db
 from app.utils import log_audit
+from app.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
@@ -49,7 +50,7 @@ def _clear_failed_attempts(ip: str):
 @router.post("/logout")
 async def logout(request: Request, db: Session = Depends(get_db)):
     """Encerra a sessão do administrador"""
-    log_audit(db, "logout", "auth", ip=request.client.host if request.client else None)
+    log_audit(db, "logout", "auth", ip=get_client_ip(request))
     response = JSONResponse(content={"ok": True})
     response.delete_cookie("admin_token")
     return response
@@ -61,7 +62,7 @@ async def login(credentials: LoginRequest, request: Request, db: Session = Depen
     Endpoint de login
     Retorna token JWT para autenticação e define cookie
     """
-    ip = request.client.host if request.client else "unknown"
+    ip = get_client_ip(request)
 
     _check_brute_force(ip)
 

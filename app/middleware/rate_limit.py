@@ -7,6 +7,7 @@ from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from app.config import settings
+from app.client_ip import get_client_ip
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._cleanup(now)
             self.last_cleanup = now
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = get_client_ip(request)
         minute_ago = now - timedelta(minutes=1)
 
         timestamps = self.requests[client_ip]

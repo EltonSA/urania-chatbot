@@ -17,6 +17,7 @@ from app.schemas import FileOut, FileUpdateBody
 from app.auth import get_current_user
 from app.utils import build_file_url, ensure_upload_dirs, log_audit
 from app.config import settings
+from app.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ async def upload_file(
         "arquivo",
         f"{file_type.upper()}: {db_file.title} (ID {db_file.id})",
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
 
     return FileOut(
@@ -279,7 +280,7 @@ async def upload_group_media(
         "arquivo",
         f"Grupo imagens/GIFs ({len(out)} arquivos) group_id={group_id}: {title or 'sem título'}",
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return out
 
@@ -349,7 +350,7 @@ def update_file(
             "arquivo",
             f"ID {file_id}: {'; '.join(changes)}",
             user=current_user.get("sub"),
-            ip=request.client.host if request.client else None,
+            ip=get_client_ip(request),
         )
 
     return {
@@ -398,6 +399,6 @@ def delete_file(
         "arquivo",
         file_info,
         user=current_user.get("sub"),
-        ip=request.client.host if request.client else None,
+        ip=get_client_ip(request),
     )
     return {"ok": True}
