@@ -277,17 +277,22 @@
   let messageLog = [];
   let _isRestoring = false;
 
+  /* Bump quando mudar a saudação inicial ou formato guardado (iframe /widget?embed=1 usa as mesmas chaves). */
+  const UCW_STORE_VER = "v3";
+  const KEY_MSGS = "ucw_msgs_" + UCW_STORE_VER;
+  const KEY_HIST = "ucw_hist_" + UCW_STORE_VER;
+
   function saveChat(){
     try {
-      sessionStorage.setItem("ucw_msgs", JSON.stringify(messageLog));
-      sessionStorage.setItem("ucw_hist", JSON.stringify(chatHistory));
+      sessionStorage.setItem(KEY_MSGS, JSON.stringify(messageLog));
+      sessionStorage.setItem(KEY_HIST, JSON.stringify(chatHistory));
     } catch(_){}
   }
 
   function restoreChat(){
     try {
-      const saved = JSON.parse(sessionStorage.getItem("ucw_msgs"));
-      const hist = JSON.parse(sessionStorage.getItem("ucw_hist"));
+      const saved = JSON.parse(sessionStorage.getItem(KEY_MSGS));
+      const hist = JSON.parse(sessionStorage.getItem(KEY_HIST));
       if(saved && saved.length > 0){
         _isRestoring = true;
         messageLog = saved;
@@ -1032,8 +1037,26 @@
     }, 30000);
   }
 
+  const DEFAULT_CHAT_WELCOME_FALLBACK =
+    "Olá! 👋\n\n" +
+    "Eu sou o Professor Horácio, assistente virtual do URÂNIA+ 💚\n\n" +
+    "Qual é sua dúvida?";
+
+  async function fetchChatWelcomeMessage(){
+    try{
+      const res = await fetch("/branding", { cache: "no-store" });
+      if(!res.ok) return DEFAULT_CHAT_WELCOME_FALLBACK;
+      const b = await res.json();
+      if(b.chat_welcome_message && String(b.chat_welcome_message).trim()){
+        return String(b.chat_welcome_message);
+      }
+    }catch(_){}
+    return DEFAULT_CHAT_WELCOME_FALLBACK;
+  }
+
   (async function init(){
     const restored = restoreChat();
+    const welcomeText = await fetchChatWelcomeMessage();
     const status = await checkChatStatus();
 
     notifyParent("ucw-status", { available: status.available !== false });
@@ -1055,11 +1078,7 @@
       checkStatusPeriodically();
     } else {
       if(!restored){
-        addMessage(
-          "bot",
-          "Olá! Sou o assistente virtual deste ambiente de testes.\n" +
-          "Você pode fazer perguntas e, quando fizer sentido, eu envio PDFs e GIFs cadastrados no painel."
-        );
+        addMessage("bot", welcomeText);
       }
     }
   })();

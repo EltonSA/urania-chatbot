@@ -2,12 +2,13 @@
 Marca pública: nome exibido e favicon (sem autenticação).
 """
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import settings
 from app.chat_theme import load_merged_chat_theme
+from app.chat_welcome import load_chat_welcome_message
 from app.utils import (
     get_setting,
     resolve_branding_favicon,
@@ -46,14 +47,22 @@ def public_branding(db: Session = Depends(get_db)):
     else:
         chat_avatar_url = LOGO_STATIC_PATH
 
-    return {
+    payload = {
         "display_name": display_name,
         "favicon_url": favicon_url,
         "logo_url": logo_url,
         "chat_avatar_url": chat_avatar_url,
         "version": settings.resolved_app_version,
         "chat_theme": load_merged_chat_theme(db),
+        "chat_welcome_message": load_chat_welcome_message(db),
     }
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @router.get("/branding/favicon")

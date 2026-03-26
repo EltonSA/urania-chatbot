@@ -28,7 +28,7 @@
     });
   }
 
-  fetch('/branding')
+  fetch('/branding', { cache: 'no-store' })
     .then(function (res) {
       return res.json();
     })

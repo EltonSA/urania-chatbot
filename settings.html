@@ -259,6 +259,15 @@
           Aparência do chat
         </div>
         <p class="card-desc">Cores e estilo só da página <code class="bg-gray-100 px-1 rounded text-[11px]">/widget</code> e do cabeçalho/botão do widget flutuante. O painel admin não muda.</p>
+        <div class="mt-5 pt-5 border-t border-gray-100">
+          <label for="chat-welcome-message" class="block text-xs font-semibold text-gray-700 mb-1">Mensagem inicial do chat</label>
+          <p class="text-[11px] text-gray-400 mb-2">Primeira mensagem do assistente quando o serviço está disponível (<code class="bg-gray-100 px-1 rounded text-[10px]">/widget</code> e widget no site). Linhas vazias são permitidas.</p>
+          <textarea id="chat-welcome-message" rows="6" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm leading-relaxed resize-y outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-100 font-[inherit] placeholder:text-gray-400" placeholder="Olá! ..."></textarea>
+          <div class="flex flex-wrap items-center gap-2 mt-2">
+            <button type="button" id="btn-chat-welcome-reset" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Restaurar texto padrão</button>
+            <span class="text-[11px] text-gray-400">Grava o texto padrão no servidor já e atualiza o campo. Para editar à mão, use <strong>Salvar</strong> no topo.</span>
+          </div>
+        </div>
         <div class="flex flex-wrap gap-2 mt-4">
           <button type="button" id="btn-theme-preset-green" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Verde padrão</button>
           <button type="button" id="btn-theme-preset-blue" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer font-[inherit]">Preset azul</button>
@@ -588,7 +597,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     has_custom_logo: false,
     has_custom_chat_avatar: false,
     app_version: '',
-    chatTheme: cloneChatTheme(null)
+    chatTheme: cloneChatTheme(null),
+    chat_welcome_message: ''
   };
 
   var chatThemeWired = false;
@@ -614,6 +624,7 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         state.has_custom_chat_avatar = !!d.has_custom_chat_avatar;
         state.app_version = d.app_version || '';
         state.chatTheme = cloneChatTheme(d.chat_theme);
+        state.chat_welcome_message = typeof d.chat_welcome_message === 'string' ? d.chat_welcome_message : '';
         render();
         wireChatThemeIfNeeded();
       })
@@ -698,6 +709,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
       sVer.textContent = rv ? (/^v/i.test(rv) ? rv : 'v' + rv) : '—';
     }
     renderChatThemeFields();
+    var cwEl = document.getElementById('chat-welcome-message');
+    if (cwEl) cwEl.value = state.chat_welcome_message || '';
   }
 
   function renderChatThemeFields() {
@@ -843,6 +856,30 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
   document.getElementById('system-display-name').addEventListener('input', function () {
     state.system_display_name = this.value;
   });
+
+  var chatWelcomeTa = document.getElementById('chat-welcome-message');
+  if (chatWelcomeTa) {
+    chatWelcomeTa.addEventListener('input', function () {
+      state.chat_welcome_message = this.value;
+    });
+  }
+  var btnChatWelcomeReset = document.getElementById('btn-chat-welcome-reset');
+  if (btnChatWelcomeReset) {
+    btnChatWelcomeReset.addEventListener('click', function () {
+      fetch('/admin/chat-welcome/reset', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+        .then(function (r) {
+          if (!r.ok) throw r;
+          return r.json();
+        })
+        .then(function () {
+          showToast('Mensagem inicial restaurada no servidor', 'success');
+          loadSettings();
+        })
+        .catch(function () {
+          showToast('Erro ao restaurar mensagem', 'error');
+        });
+    });
+  }
 
   document.getElementById('favicon-file').addEventListener('change', function () {
     var inp = this;
@@ -1013,7 +1050,8 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
         widget_enabled: state.widget_enabled,
         satisfaction_support_button: state.satisfaction_support_button,
         system_display_name: state.system_display_name.trim(),
-        chat_theme: state.chatTheme
+        chat_theme: state.chatTheme,
+        chat_welcome_message: state.chat_welcome_message
       })
     })
     .then(function (r) { if (!r.ok) throw r; return r.json(); })

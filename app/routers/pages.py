@@ -61,7 +61,12 @@ def widget_page():
     
     return HTMLResponse(
         content=content,
-        headers={"Content-Security-Policy": csp}
+        headers={
+            "Content-Security-Policy": csp,
+            # Evita HTML antigo em cache no iframe do chat-widget.js (mensagem/tema vêm do JS atual).
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        },
     )
 
 

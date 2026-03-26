@@ -109,6 +109,18 @@ class SystemSettingsBody(BaseModel):
     satisfaction_support_button: Optional[bool] = None
     system_display_name: Optional[str] = Field(None, max_length=120)
     chat_theme: Optional[ChatThemeSettings] = None
+    chat_welcome_message: Optional[str] = Field(None, max_length=2500)
+
+    @validator("chat_welcome_message")
+    def validate_chat_welcome_message(cls, v):
+        if v is None:
+            return None
+        from app.chat_welcome import normalize_welcome_text
+
+        try:
+            return normalize_welcome_text(v)
+        except ValueError as e:
+            raise ValueError(str(e))
 
     @validator("system_display_name")
     def strip_display_name(cls, v):

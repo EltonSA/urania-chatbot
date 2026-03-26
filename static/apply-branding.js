@@ -59,7 +59,7 @@
       el.setAttribute('alt', b.display_name);
     });
   }
-  fetch('/branding')
+  fetch('/branding', { cache: 'no-store' })
     .then(function (r) {
       return r.json();
     })

@@ -2,6 +2,7 @@
  * Urânia + Chat Widget (Flutuante)
  *
  * Embute o /widget existente dentro de um iframe flutuante.
+ * Saudação inicial: GET /branding → chat_welcome_message (editável em Configurações), aplicada em widget.html.
  *
  * Uso (mesmo domínio):
  *   <script src="/static/chat-widget.js"></script>
@@ -74,8 +75,23 @@
   })();
 
   var API = C.apiUrl || '';
-  var WIDGET_URL = API ? (API.replace(/\/$/, '') + '/widget?embed=1') : '/widget?embed=1';
+  /** Base do iframe; em loadIframe acrescenta &_cb= para não ficar com widget.html antigo em cache. */
+  var WIDGET_URL_BASE = API ? (API.replace(/\/$/, '') + '/widget?embed=1') : '/widget?embed=1';
   var TRUSTED_ORIGIN = API ? (function () { try { return new URL(API).origin; } catch (_) { return window.location.origin; } })() : window.location.origin;
+
+  /** Origem da API para GET /branding (cabeçalho do balão). Se apiUrl vier vazio, usa o script ou a página — senão fetchBranding não corria em /admin, etc. */
+  function resolveBrandingOrigin() {
+    var base = (API || '').replace(/\/$/, '');
+    if (base) return base;
+    try {
+      var st = document.querySelector('script[src*="chat-widget"]');
+      if (st && st.src) return new URL(st.src).origin;
+    } catch (_) {}
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin;
+    }
+    return '';
+  }
   if (!C.avatarUrl) {
     C.avatarUrl = API
       ? API.replace(/\/$/, '') + '/branding/chat-avatar'
@@ -296,19 +312,20 @@
   var isOpen = false;
   var isMin = false;
   var isFull = false;
-  var iframeLoaded = false;
 
+  /**
+   * Sempre novo _cb: o browser cacheava o /widget no iframe e a mensagem/tema não atualizavam.
+   * Minimizar não chama isto de novo — só abrir o painel após fechar (X) ou primeira abertura.
+   */
   function loadIframe() {
-    if (!iframeLoaded) {
-      $.iframe.src = WIDGET_URL;
-      iframeLoaded = true;
-    }
+    $.iframe.src = WIDGET_URL_BASE + '&_cb=' + Date.now();
   }
 
   function openChat() {
     isOpen = true;
     isMin = false;
     loadIframe();
+    fetchBranding();
     $.win.classList.add('open');
     $.win.classList.remove('min');
     $.trig.classList.add('open');
@@ -456,10 +473,11 @@
      INIT
      ================================================================ */
   function fetchBranding() {
-    if (!API) return;
+    var origin = resolveBrandingOrigin();
+    if (!origin) return;
     var cfg = window.UraniaWidgetConfig || {};
-    var url = API.replace(/\/$/, '') + '/branding';
-    fetch(url)
+    var url = origin.replace(/\/$/, '') + '/branding';
+    fetch(url, { cache: 'no-store' })
       .then(function (r) {
         return r.json();
       })
@@ -467,7 +485,7 @@
         if (!b) return;
         if (!Object.prototype.hasOwnProperty.call(cfg, 'assistantName') && b.display_name) {
           C.assistantName = b.display_name;
-          var nm = document.querySelector('.ucw-hdr-name');
+          var nm = $.hdr ? $.hdr.querySelector('.ucw-hdr-name') : document.querySelector('#ucw-root .ucw-hdr-name');
           if (nm) nm.textContent = b.display_name;
         }
         var t = b.chat_theme;
@@ -497,10 +515,18 @@
       openChat();
       if (sGet('ucw_min') === '1') minimize();
       else if (sGet('ucw_full') === '1') goFull();
-    } else {
-      // Pre-carrega o iframe para a mensagem inicial estar pronta ao abrir
-      setTimeout(loadIframe, 800);
     }
+    /* iframe só carrega ao abrir o chat (evita HTML antigo em cache + conversa alinhada ao /branding atual) */
+
+    var _ucwBrandingVisTimer = null;
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible') return;
+      if (_ucwBrandingVisTimer) clearTimeout(_ucwBrandingVisTimer);
+      _ucwBrandingVisTimer = setTimeout(function () {
+        fetchBranding();
+        _ucwBrandingVisTimer = null;
+      }, 250);
+    });
   }
 
   if (document.readyState === 'loading') {

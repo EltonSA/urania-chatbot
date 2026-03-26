@@ -29,6 +29,11 @@ from app.models import ChatEventModel, ChatSessionModel, FileModel, AuditLogMode
 from app.config import settings
 from app.date_range import parse_stats_date_range
 from app.chat_theme import load_merged_chat_theme, save_chat_theme_partial, reset_chat_theme
+from app.chat_welcome import (
+    load_chat_welcome_message,
+    reset_chat_welcome_message,
+    save_chat_welcome_message,
+)
 import json
 import os
 import sys
@@ -307,6 +312,7 @@ def get_system_settings(
         "app_version": settings.resolved_app_version,
         "app_version_env": settings.APP_VERSION,
         "chat_theme": load_merged_chat_theme(db),
+        "chat_welcome_message": load_chat_welcome_message(db),
     }
 
 
@@ -363,6 +369,26 @@ def save_system_settings(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=str(ve),
                 )
+
+    if body.chat_welcome_message is not None:
+        try:
+            before = get_setting(db, "chat_welcome_message")
+            save_chat_welcome_message(db, body.chat_welcome_message)
+            after = get_setting(db, "chat_welcome_message")
+            if before != after:
+                log_audit(
+                    db,
+                    "chat_welcome_updated",
+                    "config",
+                    (after or "")[:400],
+                    user=current_user.get("sub"),
+                    ip=request.client.host if request.client else None,
+                )
+        except ValueError as ve:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(ve),
+            )
 
     if changes:
         log_audit(db, "settings_updated", "config", "; ".join(changes), user=current_user.get("sub"), ip=request.client.host if request.client else None)
@@ -629,6 +655,25 @@ def reset_chat_theme_admin(
         "chat_theme_reset",
         "config",
         "Tema do chat restaurado ao padrão",
+        user=current_user.get("sub"),
+        ip=request.client.host if request.client else None,
+    )
+    return {"ok": True}
+
+
+@router.post("/chat-welcome/reset")
+def reset_chat_welcome_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Restaura a mensagem inicial do /widget ao texto padrão."""
+    reset_chat_welcome_message(db)
+    log_audit(
+        db,
+        "chat_welcome_reset",
+        "config",
+        "Mensagem inicial do chat restaurada ao padrão",
         user=current_user.get("sub"),
         ip=request.client.host if request.client else None,
     )
