@@ -87,6 +87,8 @@
     .resource-folder-icon.resource-folder-icon--gif{background:linear-gradient(135deg,#7c3aed,#6d28d9)}
     .resource-folder-icon.resource-folder-icon--mixed{background:linear-gradient(135deg,#d97706,#ea580c)}
     .resource-folder-meta{font-size:11px;font-weight:600;color:#64748b;flex-shrink:0}
+    /* Pastas fechadas por defeito — conteúdo só visível com [open] (clique no cabeçalho) */
+    .resource-folder:not([open]) > .resource-folder-items{display:none!important}
     .resource-folder-items{display:flex;flex-direction:column;gap:8px;padding:12px 12px 14px 14px;background:#fff;border-top:1px solid #f1f5f9}
     .resource-item-nested{padding:14px;border-radius:12px}
     .resource-item-nested:hover{transform:translateY(0)}

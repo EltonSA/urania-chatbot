@@ -439,7 +439,8 @@ function createGroupFolderDetails(groupFiles, folderKind) {
     const fk = folderKind === "gif" || folderKind === "image" || folderKind === "mixed" ? folderKind : "mixed";
     const details = document.createElement("details");
     details.className = "resource-folder";
-    details.open = true;
+    details.open = false;
+    details.removeAttribute("open");
     const sum = document.createElement("summary");
     const tit = document.createElement("div");
     tit.className = "resource-folder-title";
