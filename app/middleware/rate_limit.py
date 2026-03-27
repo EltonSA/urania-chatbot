@@ -1,9 +1,13 @@
 """
 Rate limiting middleware
+
+Conta pedidos por IP por minuto. Pedidos leves e públicos (GET /branding, /chat/status,
+estáticos, página /widget, preflight CORS) não entram no contador — o widget embutido
+gera muitos GET legítimos (iframe + pai + troca de abas) e esgotava o limite global.
 """
 from collections import defaultdict
 from datetime import datetime, timedelta
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from app.config import settings
@@ -13,6 +17,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 MAX_TRACKED_IPS = 10_000
+
+
+def _is_exempt_from_rate_limit(request: Request) -> bool:
+    """Não contar para o limite: leituras públicas frequentes e preflight CORS."""
+    if request.method == "OPTIONS":
+        return True
+    if request.method != "GET":
+        return False
+    path = request.url.path
+    if path == "/health":
+        return True
+    if path.startswith("/static/"):
+        return True
+    if path.startswith("/branding"):
+        return True
+    if path == "/chat/status":
+        return True
+    if path == "/widget":
+        return True
+    # Anexos do chat (PDF/GIF/imagem) — muitos GET ao abrir conversa com mídia
+    if path.startswith("/files/pdf/") or path.startswith("/files/gif/") or path.startswith("/files/image/"):
+        return True
+    return False
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -26,6 +53,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         if not settings.RATE_LIMIT_ENABLED:
+            return await call_next(request)
+
+        if _is_exempt_from_rate_limit(request):
             return await call_next(request)
 
         now = datetime.utcnow()

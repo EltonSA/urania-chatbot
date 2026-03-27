@@ -491,6 +491,9 @@
   /* ================================================================
      INIT
      ================================================================ */
+  /** Último GET /branding com sucesso — evita refetch ao trocar de aba em loop. */
+  var _ucwBrandingOkAt = 0;
+
   function fetchBranding() {
     var origin = resolveBrandingOrigin();
     if (!origin) return;
@@ -502,6 +505,7 @@
       })
       .then(function (b) {
         if (!b) return;
+        _ucwBrandingOkAt = Date.now();
         if (!Object.prototype.hasOwnProperty.call(cfg, 'assistantName') && b.display_name) {
           C.assistantName = b.display_name;
           var nm = $.hdr ? $.hdr.querySelector('.ucw-hdr-name') : document.querySelector('#ucw-root .ucw-hdr-name');
@@ -538,10 +542,15 @@
     /* iframe só carrega ao abrir o chat (evita HTML antigo em cache + conversa alinhada ao /branding atual) */
 
     var _ucwBrandingVisTimer = null;
+    var BRANDING_ON_TAB_MS = 120000;
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState !== 'visible') return;
       if (_ucwBrandingVisTimer) clearTimeout(_ucwBrandingVisTimer);
       _ucwBrandingVisTimer = setTimeout(function () {
+        if (Date.now() - _ucwBrandingOkAt < BRANDING_ON_TAB_MS) {
+          _ucwBrandingVisTimer = null;
+          return;
+        }
         fetchBranding();
         _ucwBrandingVisTimer = null;
       }, 250);
