@@ -399,16 +399,10 @@
 
     const firstImg = attachments.find(function(a){ return a.type === "gif" || a.type === "image"; });
     if(firstImg){
-      const im = new Image();
-      im.onload = function(){
-        const nw = im.naturalWidth || 0;
-        const displayW = nw > 0 ? Math.min(nw, attCap) : attCap;
-        if(displayW < 24) return;
-        bubble.style.maxWidth = Math.min(displayW + pad, cap) + "px";
-        scrollToBottom();
-      };
-      im.onerror = function(){};
-      im.src = firstImg.url;
+      // Evita segunda requisição HTTP: não usar new Image() com a mesma URL do <img> em renderAttachments.
+      // Largura inicial pelo teto da área; syncBubbleWidthToMedia refina após o <img> carregar.
+      bubble.style.maxWidth = Math.min(attCap + pad, cap) + "px";
+      scrollToBottom();
       return;
     }
     if(attachments.some(function(a){ return a.type === "pdf"; })){
