@@ -16,6 +16,27 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+MAX_TAGS_PER_RESOURCE = 15
+
+
+def normalize_tags_csv(tags: Optional[str], max_tags: int = MAX_TAGS_PER_RESOURCE) -> str:
+    """
+    Normaliza o campo tags (CSV por vírgulas): trim, dedupe case-insensitive, máximo N tags.
+    """
+    if not tags or not str(tags).strip():
+        return ""
+    parts = [p.strip() for p in str(tags).split(",") if p.strip()]
+    seen = set()
+    out: List[str] = []
+    for p in parts:
+        key = p.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(p)
+            if len(out) >= max_tags:
+                break
+    return ", ".join(out)
+
 
 def validate_openai_connection() -> Tuple[bool, Optional[str]]:
     """

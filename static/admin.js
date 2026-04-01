@@ -11,6 +11,191 @@ let statPdfs, statGifs, statImages, statTotalSize;
 let fileSearch, clearSearchBtn;
 let allFiles = []; // Armazena todos os arquivos para filtro
 let currentTypeFilter = "all"; // Filtro atual por tipo
+/** Pastas vs ficheiros soltos: all | groups | standalone (só imagem/GIF; PDF ignora) */
+let currentLayoutFilter = "all";
+let _groupRenamePendingId = null;
+
+/** Só liberta scroll do body se não houver outro modal/painel aberto */
+function unlockBodyScrollIfAllowed() {
+    const edit = document.getElementById("resource-edit-overlay");
+    const group = document.getElementById("group-folder-overlay");
+    const viewer = document.getElementById("file-viewer-modal");
+    const rename = document.getElementById("group-rename-modal");
+    const backup = document.getElementById("backup-download-modal");
+    if (edit && edit.classList.contains("is-open")) return;
+    if (group && group.classList.contains("is-open")) return;
+    if (viewer && viewer.classList.contains("active")) return;
+    if (rename && rename.classList.contains("active")) return;
+    if (backup && backup.classList.contains("active")) return;
+    document.body.style.overflow = "";
+}
+
+function updateLayoutFilterVisibility() {
+    const wrap = document.getElementById("resource-layout-filter-wrap");
+    if (!wrap) return;
+    const show = currentTypeFilter === "all" || currentTypeFilter === "image" || currentTypeFilter === "gif";
+    wrap.style.display = show ? "" : "none";
+}
+
+const MAX_TAGS = 15;
+let tagsEditorSingle = null;
+let tagsEditorGroup = null;
+
+function parseTagsFromInput(str) {
+    if (!str || !String(str).trim()) return [];
+    return String(str)
+        .split(",")
+        .map(s => s.trim().replace(/\s+/g, " "))
+        .filter(Boolean);
+}
+
+function dedupeTagsPreserveOrder(arr) {
+    const seen = new Set();
+    const out = [];
+    for (const t of arr) {
+        const k = t.toLowerCase();
+        if (!seen.has(k)) {
+            seen.add(k);
+            out.push(t);
+        }
+    }
+    return out;
+}
+
+function tagsArrayToCsv(arr) {
+    return arr.join(", ");
+}
+
+/**
+ * Chips + campo + botão «+»; actualiza hiddenInput (CSV) para FormData / save.
+ */
+function createTagsEditor(rootEl, hiddenInput, options) {
+    const opts = options || {};
+    const max = typeof opts.max === "number" ? opts.max : MAX_TAGS;
+    const inputId = opts.inputId || null;
+
+    let tags = dedupeTagsPreserveOrder(parseTagsFromInput(hiddenInput.value || "")).slice(0, max);
+
+    rootEl.innerHTML = "";
+    rootEl.classList.add("tags-editor-inner");
+
+    const chipsBox = document.createElement("div");
+    chipsBox.className = "tags-editor-chips";
+
+    const row = document.createElement("div");
+    row.className = "tags-editor-row";
+
+    const textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.className = "tags-editor-input";
+    if (inputId) textInput.id = inputId;
+    textInput.placeholder = "Nova tag ou várias separadas por vírgula";
+    textInput.setAttribute("autocomplete", "off");
+
+    const btnAdd = document.createElement("button");
+    btnAdd.type = "button";
+    btnAdd.className = "tags-editor-add";
+    btnAdd.setAttribute("aria-label", "Adicionar tags");
+    btnAdd.textContent = "+";
+
+    const hint = document.createElement("p");
+    hint.className = "tags-editor-hint";
+    const countSpan = document.createElement("span");
+    countSpan.className = "tags-editor-count";
+
+    function renderChips() {
+        chipsBox.innerHTML = "";
+        tags.forEach(tag => {
+            const chip = document.createElement("span");
+            chip.className = "tags-chip";
+            const label = document.createElement("span");
+            label.className = "tags-chip-text";
+            label.textContent = tag;
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "tags-chip-remove";
+            remove.setAttribute("aria-label", "Remover " + tag);
+            remove.innerHTML = "&times;";
+            remove.addEventListener("click", () => {
+                tags = tags.filter(t => t !== tag);
+                syncHidden();
+            });
+            chip.appendChild(label);
+            chip.appendChild(remove);
+            chipsBox.appendChild(chip);
+        });
+    }
+
+    function syncHidden() {
+        tags = dedupeTagsPreserveOrder(tags).slice(0, max);
+        hiddenInput.value = tagsArrayToCsv(tags);
+        countSpan.textContent = tags.length + "/" + max;
+        renderChips();
+        const full = tags.length >= max;
+        textInput.placeholder = full ? "Limite de " + max + " tags" : "Nova tag ou várias separadas por vírgula";
+        textInput.disabled = full;
+        btnAdd.disabled = full;
+    }
+
+    function tryAddFromInput() {
+        if (tags.length >= max) return;
+        const parts = parseTagsFromInput(textInput.value);
+        if (!parts.length) return;
+        for (const p of parts) {
+            if (tags.length >= max) break;
+            const k = p.toLowerCase();
+            if (!tags.some(t => t.toLowerCase() === k)) {
+                tags.push(p);
+            }
+        }
+        textInput.value = "";
+        syncHidden();
+    }
+
+    btnAdd.addEventListener("click", tryAddFromInput);
+    textInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            tryAddFromInput();
+        }
+    });
+
+    row.appendChild(textInput);
+    row.appendChild(btnAdd);
+
+    hint.appendChild(document.createTextNode("Até " + max + " tags. "));
+    hint.appendChild(countSpan);
+
+    rootEl.appendChild(chipsBox);
+    rootEl.appendChild(row);
+    rootEl.appendChild(hint);
+
+    syncHidden();
+
+    return {
+        getValue() {
+            return hiddenInput.value;
+        },
+        clear() {
+            tags = [];
+            textInput.value = "";
+            syncHidden();
+        },
+        setValue(csv) {
+            tags = dedupeTagsPreserveOrder(parseTagsFromInput(csv || "")).slice(0, max);
+            syncHidden();
+        }
+    };
+}
+
+function initTagsEditors() {
+    const r1 = document.getElementById("file-tags-editor-root");
+    const h1 = document.getElementById("file-tags");
+    if (r1 && h1) tagsEditorSingle = createTagsEditor(r1, h1, { max: MAX_TAGS });
+    const r2 = document.getElementById("group-tags-editor-root");
+    const h2 = document.getElementById("group-tags");
+    if (r2 && h2) tagsEditorGroup = createTagsEditor(r2, h2, { max: MAX_TAGS });
+}
 
 function initElements() {
     promptText = document.getElementById("prompt-text");
@@ -74,6 +259,29 @@ function getAuthHeadersFormData() {
     return {
         'Authorization': `Bearer ${token}`
     };
+}
+
+/** POST /admin/files/upload-group — usado pelo formulário lateral e pelo painel do grupo */
+async function postUploadGroupFormData(formData) {
+    const headers = getAuthHeadersFormData();
+    if (!headers.Authorization) {
+        return { ok: false, error: "Sem sessão" };
+    }
+    const res = await fetch("/admin/files/upload-group", {
+        method: "POST",
+        headers,
+        body: formData,
+    });
+    if (!res.ok) {
+        if (res.status === 401) {
+            window.location.href = "/login";
+            return { ok: false, error: "auth" };
+        }
+        const err = await res.text();
+        return { ok: false, error: err || res.statusText };
+    }
+    const data = await res.json();
+    return { ok: true, data };
 }
 
 // PROMPT
@@ -243,6 +451,7 @@ try {
     // Renderiza os arquivos (com filtro se houver)
     const searchTerm = fileSearch ? fileSearch.value.toLowerCase().trim() : "";
     renderFiles(allFiles, searchTerm);
+    updateLayoutFilterVisibility();
 } catch (err) {
     console.error("Erro ao carregar arquivos:", err);
 }
@@ -293,7 +502,16 @@ function buildResourceItemElement(f, options) {
 
     const typePill = document.createElement("span");
     typePill.className = "resource-type-pill " + (ft === "pdf" ? "pdf" : ft === "image" ? "image" : ft === "gif" ? "gif" : "");
-    const typeLabel = ft === "image" ? "IMAGEM" : (f.file_type || "").toUpperCase();
+    const gi = opts.groupIndex;
+    let typeLabel;
+    if (nested && typeof gi === "number" && gi >= 1) {
+        if (ft === "image") typeLabel = "IMAGEM " + gi;
+        else if (ft === "gif") typeLabel = "GIF " + gi;
+        else if (ft === "pdf") typeLabel = "PDF " + gi;
+        else typeLabel = (f.file_type || "").toUpperCase() + " " + gi;
+    } else {
+        typeLabel = ft === "image" ? "IMAGEM" : (f.file_type || "").toUpperCase();
+    }
     typePill.textContent = typeLabel;
     titleRow.appendChild(typePill);
 
@@ -305,9 +523,10 @@ function buildResourceItemElement(f, options) {
         titleRow.appendChild(gb);
     }
 
-    const title = document.createElement("div");
-    title.className = "resource-title";
+    const title = document.createElement(nested ? "span" : "div");
+    title.className = nested ? "resource-title-tag" : "resource-title";
     title.textContent = f.title || "(sem título)";
+    title.title = f.title ? f.title.trim() : "";
     titleRow.appendChild(title);
 
     info.appendChild(titleRow);
@@ -407,7 +626,7 @@ function getMediaFilesFromCatalog(catalog) {
 
 /** Tipo real do grupo (usa `catalog` completo, ex. allFiles) para o filtro não partir grupos mistos. */
 function classifyGroupKind(groupId, catalog) {
-    const files = getMediaFilesFromCatalog(catalog).filter(f => f.group_id === groupId);
+    const files = getMediaFilesFromCatalog(catalog).filter(f => String(f.group_id) === String(groupId));
     const hasImage = files.some(f => f.file_type === "image");
     const hasGif = files.some(f => f.file_type === "gif");
     if (hasImage && hasGif) return "mixed";
@@ -423,9 +642,207 @@ function sortGroupIdsInPlace(gids, groupedMap) {
     });
 }
 
+function getGroupMediaFiles(groupId) {
+    if (!groupId) return [];
+    return sortFilesByIdAsc(
+        allFiles.filter(
+            f =>
+                f.group_id &&
+                String(f.group_id) === String(groupId) &&
+                (f.file_type === "image" || f.file_type === "gif")
+        )
+    );
+}
+
+/**
+ * Bloco de envio de imagens/GIFs para o grupo, dentro do painel lateral.
+ */
+function buildGroupDrawerAddSection(groupId, groupLabel, folderKind) {
+    const block = document.createElement("div");
+    block.className = "group-folder-add-section";
+
+    const h = document.createElement("h3");
+    h.className = "group-folder-add-title";
+    h.textContent = "Adicionar imagens ou GIFs";
+
+    const hint = document.createElement("p");
+    hint.className = "group-folder-add-hint";
+    hint.textContent =
+        "PNG, JPG, WebP ou GIF — pode selecionar vários. Opcional: descrição por ficheiro para a IA.";
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.multiple = true;
+    fileInput.accept = ".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif";
+    fileInput.className = "group-drawer-file-input";
+
+    const descContainer = document.createElement("div");
+    descContainer.className = "group-drawer-desc-container";
+
+    function rebuildDescFields() {
+        descContainer.innerHTML = "";
+        if (!fileInput.files || !fileInput.files.length) return;
+        Array.from(fileInput.files).forEach(file => {
+            const wrap = document.createElement("div");
+            wrap.className = "rounded-lg border border-gray-200 bg-gray-50/50 p-2";
+            const lab = document.createElement("label");
+            lab.className = "block text-[10px] font-semibold text-gray-500 mb-1 truncate";
+            lab.textContent = "Descrição — " + file.name;
+            const ta = document.createElement("textarea");
+            ta.className =
+                "group-file-desc w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-cyan-500 resize-y min-h-[48px] font-[inherit]";
+            ta.rows = 2;
+            ta.placeholder = "O que esta imagem ou GIF mostra (a IA usa na resposta)";
+            wrap.appendChild(lab);
+            wrap.appendChild(ta);
+            descContainer.appendChild(wrap);
+        });
+    }
+
+    fileInput.addEventListener("change", rebuildDescFields);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "group-folder-add-actions";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "group-folder-add-submit";
+    btn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Enviar para o grupo';
+
+    const status = document.createElement("span");
+    status.className = "status-text";
+    status.style.marginLeft = "0";
+
+    btn.addEventListener("click", async () => {
+        status.textContent = "";
+        status.classList.remove("error", "success", "show");
+        if (!fileInput.files || !fileInput.files.length) {
+            status.textContent = "Selecione pelo menos uma imagem ou GIF.";
+            status.classList.add("error", "show");
+            return;
+        }
+        const descEls = descContainer.querySelectorAll(".group-file-desc");
+        const descriptions = Array.from(descEls).map(el => el.value || "");
+
+        const fd = new FormData();
+        Array.from(fileInput.files).forEach(f => fd.append("files", f));
+        fd.append("title", "");
+        fd.append("tags", "");
+        fd.append("descriptions_json", JSON.stringify(descriptions));
+        fd.append("existing_group_id", groupId);
+
+        btn.disabled = true;
+        status.textContent = "Enviando...";
+        status.classList.add("show");
+        try {
+            const result = await postUploadGroupFormData(fd);
+            if (!result.ok) {
+                if (result.error === "auth") return;
+                status.textContent = "Erro: " + (result.error || "falha");
+                status.classList.add("error", "show");
+                return;
+            }
+            status.textContent = "Ficheiros adicionados ao grupo.";
+            status.classList.remove("error");
+            status.classList.add("success", "show");
+            fileInput.value = "";
+            descContainer.innerHTML = "";
+            await Promise.all([loadFiles(), loadFileStats()]);
+            const fkAfter = classifyGroupKind(groupId, allFiles);
+            const fresh = getGroupMediaFiles(groupId);
+            let glabel = groupLabel;
+            for (let i = 0; i < fresh.length; i++) {
+                const t = (fresh[i].title || "").trim();
+                if (t) {
+                    glabel = t;
+                    break;
+                }
+            }
+            openGroupFolderDrawer(fresh, fkAfter, glabel, groupId);
+        } catch (err) {
+            console.error(err);
+            status.textContent = "Erro ao enviar: " + (err.message || "falha");
+            status.classList.add("error", "show");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    btnRow.appendChild(btn);
+    btnRow.appendChild(status);
+
+    block.appendChild(h);
+    block.appendChild(hint);
+    block.appendChild(fileInput);
+    block.appendChild(descContainer);
+    block.appendChild(btnRow);
+
+    return block;
+}
+
 const FOLDER_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
 
-/** Pasta de grupo: `folderKind` image | gif | mixed (ícone/cor). */
+function openGroupFolderDrawer(groupFiles, folderKind, groupLabel, groupId) {
+    const overlay = document.getElementById("group-folder-overlay");
+    const mount = document.getElementById("group-folder-mount");
+    const heading = document.getElementById("group-folder-heading");
+    const sub = document.getElementById("group-folder-sub");
+    if (!overlay || !mount) return;
+
+    const files = sortFilesByIdAsc(groupFiles);
+    const fk = folderKind === "gif" || folderKind === "image" || folderKind === "mixed" ? folderKind : "mixed";
+    const label = groupLabel || "(sem título)";
+    if (heading) heading.textContent = label;
+    if (sub) {
+        const n = files.length;
+        const kindLabel =
+            fk === "mixed" ? "Grupo misto (imagem + GIF)" : fk === "gif" ? "Grupo de GIFs" : "Grupo de imagens";
+        sub.textContent =
+            n +
+            " ficheiro" +
+            (n !== 1 ? "s" : "") +
+            " · " +
+            kindLabel +
+            (groupId ? " · #" + groupId : "");
+    }
+
+    mount.innerHTML = "";
+    const list = document.createElement("div");
+    list.className = "group-folder-list";
+    files.forEach((f, idx) => {
+        list.appendChild(buildResourceItemElement(f, { nested: true, hideGroupBadge: true, groupIndex: idx + 1 }));
+    });
+    mount.appendChild(list);
+
+    if (groupId) {
+        mount.appendChild(buildGroupDrawerAddSection(groupId, label, fk));
+    }
+
+    overlay.classList.add("is-open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+}
+
+function closeGroupFolderDrawer() {
+    const overlay = document.getElementById("group-folder-overlay");
+    const mount = document.getElementById("group-folder-mount");
+    if (mount) mount.innerHTML = "";
+    if (overlay) {
+        overlay.classList.remove("is-open");
+        overlay.setAttribute("aria-hidden", "true");
+    }
+    unlockBodyScrollIfAllowed();
+}
+
+function setupGroupFolderDrawer() {
+    const backdrop = document.getElementById("group-folder-backdrop");
+    const closeBtn = document.getElementById("group-folder-close");
+    if (backdrop) backdrop.addEventListener("click", closeGroupFolderDrawer);
+    if (closeBtn) closeBtn.addEventListener("click", closeGroupFolderDrawer);
+}
+
+/** Linha de pasta: clique abre painel lateral (direita) com os ficheiros do grupo. */
 function createGroupFolderDetails(groupFiles, folderKind) {
     const files = sortFilesByIdAsc(groupFiles);
     let groupLabel = "(sem título)";
@@ -437,11 +854,15 @@ function createGroupFolderDetails(groupFiles, folderKind) {
         }
     }
     const fk = folderKind === "gif" || folderKind === "image" || folderKind === "mixed" ? folderKind : "mixed";
-    const details = document.createElement("details");
-    details.className = "resource-folder";
-    details.open = false;
-    details.removeAttribute("open");
-    const sum = document.createElement("summary");
+    const wrap = document.createElement("div");
+    wrap.className = "resource-folder";
+    const head = document.createElement("div");
+    head.className = "resource-folder-head";
+    head.setAttribute("role", "button");
+    head.tabIndex = 0;
+    head.setAttribute("aria-expanded", "false");
+    head.setAttribute("aria-label", "Abrir lista do grupo " + groupLabel);
+
     const tit = document.createElement("div");
     tit.className = "resource-folder-title";
     const ic = document.createElement("div");
@@ -453,17 +874,128 @@ function createGroupFolderDetails(groupFiles, folderKind) {
     span.title = groupLabel;
     tit.appendChild(ic);
     tit.appendChild(span);
+    const groupId = files[0] && files[0].group_id ? String(files[0].group_id) : "";
+    if (groupId) {
+        const btnRename = document.createElement("button");
+        btnRename.type = "button";
+        btnRename.className = "resource-folder-rename";
+        btnRename.title = "Renomear pasta";
+        btnRename.setAttribute("aria-label", "Renomear pasta");
+        btnRename.innerHTML =
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+        btnRename.addEventListener("click", e => {
+            e.preventDefault();
+            e.stopPropagation();
+            openGroupRenameModal(groupId, groupLabel);
+        });
+        tit.appendChild(btnRename);
+    }
     const meta = document.createElement("span");
     meta.className = "resource-folder-meta";
     meta.textContent = files.length + " arquivo" + (files.length !== 1 ? "s" : "");
-    sum.appendChild(tit);
-    sum.appendChild(meta);
-    const inner = document.createElement("div");
-    inner.className = "resource-folder-items";
-    files.forEach(f => inner.appendChild(buildResourceItemElement(f, { nested: true, hideGroupBadge: true })));
-    details.appendChild(sum);
-    details.appendChild(inner);
-    return details;
+    head.appendChild(tit);
+    head.appendChild(meta);
+
+    function openThisGroup() {
+        openGroupFolderDrawer(files, fk, groupLabel, groupId);
+    }
+
+    head.addEventListener("click", e => {
+        if (e.target.closest(".resource-folder-rename")) return;
+        openThisGroup();
+    });
+    head.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openThisGroup();
+        }
+    });
+
+    wrap.appendChild(head);
+    return wrap;
+}
+
+function openGroupRenameModal(groupId, currentLabel) {
+    const modal = document.getElementById("group-rename-modal");
+    const input = document.getElementById("group-rename-input");
+    if (!modal || !input) return;
+    _groupRenamePendingId = groupId;
+    input.value = currentLabel === "(sem título)" ? "" : currentLabel;
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+}
+
+function setupGroupRenameModal() {
+    const modal = document.getElementById("group-rename-modal");
+    const input = document.getElementById("group-rename-input");
+    const btnSave = document.getElementById("group-rename-save");
+    const btnCancel = document.getElementById("group-rename-cancel");
+    const btnClose = document.getElementById("group-rename-close");
+    if (!modal || !input || !btnSave || !btnCancel) return;
+
+    function closeGroupRenameModal() {
+        modal.classList.remove("active");
+        modal.setAttribute("aria-hidden", "true");
+        _groupRenamePendingId = null;
+        input.value = "";
+        unlockBodyScrollIfAllowed();
+    }
+
+    btnSave.addEventListener("click", async () => {
+        const title = (input.value || "").trim();
+        if (!title) {
+            alert("Indique um nome para o grupo.");
+            return;
+        }
+        const gid = _groupRenamePendingId;
+        if (!gid) return;
+        btnSave.disabled = true;
+        try {
+            const res = await fetch("/admin/files/group/" + encodeURIComponent(gid), {
+                method: "PUT",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ title }),
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    window.location.href = "/login";
+                    return;
+                }
+                const t = await res.text();
+                alert("Erro: " + (t || res.statusText));
+                return;
+            }
+            closeGroupRenameModal();
+            await Promise.all([loadFiles(), loadFileStats()]);
+        } catch (e) {
+            console.error(e);
+            alert("Erro ao renomear grupo.");
+        } finally {
+            btnSave.disabled = false;
+        }
+    });
+
+    btnCancel.addEventListener("click", closeGroupRenameModal);
+    if (btnClose) btnClose.addEventListener("click", closeGroupRenameModal);
+    modal.addEventListener("click", e => {
+        if (e.target === modal) closeGroupRenameModal();
+    });
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && modal.classList.contains("active")) {
+            closeGroupRenameModal();
+        }
+    });
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            btnSave.click();
+        }
+    });
 }
 
 function renderFiles(files, searchTerm = "") {
@@ -508,6 +1040,14 @@ function renderFiles(files, searchTerm = "") {
     const showImageBlock = currentTypeFilter === "all" || currentTypeFilter === "image";
     const showGifBlock = currentTypeFilter === "all" || currentTypeFilter === "gif";
 
+    const layoutFilter = currentLayoutFilter;
+    const showGroups = layoutFilter === "all" || layoutFilter === "groups";
+    const showStandalone = layoutFilter === "all" || layoutFilter === "standalone";
+    /** Com vista «Todos», PDFs contam como ficheiros únicos — escondidos em «só grupos». */
+    const includePdfInLayout =
+        currentTypeFilter === "pdf" ||
+        (currentTypeFilter === "all" && (layoutFilter === "all" || layoutFilter === "standalone"));
+
     const pdfs = sortFilesByIdAsc(filteredFiles.filter(f => f.file_type === "pdf"));
     const mediaOnly = filteredFiles.filter(f => f.file_type === "image" || f.file_type === "gif");
 
@@ -538,7 +1078,7 @@ function renderFiles(files, searchTerm = "") {
     const ungroupedImages = sortFilesByIdAsc(mediaOnly.filter(f => !f.group_id && f.file_type === "image"));
     const ungroupedGifs = sortFilesByIdAsc(mediaOnly.filter(f => !f.group_id && f.file_type === "gif"));
 
-    if (showPdf && pdfs.length > 0) {
+    if (showPdf && pdfs.length > 0 && includePdfInLayout) {
         const list = document.createElement("div");
         list.className = "resource-section-list resource-section-list--split";
         const sb = createResourceSubblock("pdf-list", "Lista de PDFs", "Cada cartão é um documento enviado em separado.");
@@ -551,7 +1091,7 @@ function renderFiles(files, searchTerm = "") {
         const list = document.createElement("div");
         list.className = "resource-section-list resource-section-list--split";
         const hasImageGroups = imageOnlyGids.length > 0 || (currentTypeFilter === "image" && mixedGids.length > 0);
-        if (hasImageGroups) {
+        if (hasImageGroups && showGroups) {
             const sb = createResourceSubblock(
                 "groups",
                 "Grupos (pastas)",
@@ -563,7 +1103,7 @@ function renderFiles(files, searchTerm = "") {
             }
             list.appendChild(sb.wrap);
         }
-        if (ungroupedImages.length > 0) {
+        if (ungroupedImages.length > 0 && showStandalone) {
             const sb = createResourceSubblock(
                 "standalone-image",
                 "Ficheiros únicos",
@@ -587,7 +1127,7 @@ function renderFiles(files, searchTerm = "") {
         const list = document.createElement("div");
         list.className = "resource-section-list resource-section-list--split";
         const hasGifGroups = gifOnlyGids.length > 0 || (currentTypeFilter === "gif" && mixedGids.length > 0);
-        if (hasGifGroups) {
+        if (hasGifGroups && showGroups) {
             const sb = createResourceSubblock(
                 "groups-gif",
                 "Grupos (pastas)",
@@ -599,7 +1139,7 @@ function renderFiles(files, searchTerm = "") {
             }
             list.appendChild(sb.wrap);
         }
-        if (ungroupedGifs.length > 0) {
+        if (ungroupedGifs.length > 0 && showStandalone) {
             const sb = createResourceSubblock(
                 "standalone-gif",
                 "Ficheiros únicos",
@@ -619,7 +1159,7 @@ function renderFiles(files, searchTerm = "") {
         }
     }
 
-    if (currentTypeFilter === "all" && mixedGids.length > 0) {
+    if (currentTypeFilter === "all" && mixedGids.length > 0 && showGroups) {
         const list = document.createElement("div");
         list.className = "resource-section-list resource-section-list--split";
         const sb = createResourceSubblock(
@@ -638,9 +1178,18 @@ function renderFiles(files, searchTerm = "") {
 
     if (filesList.children.length === 0) {
         if (filesEmpty) {
-            filesEmpty.textContent = st
-                ? `Nenhum recurso encontrado para "${searchTerm}"`
-                : "Nenhum recurso cadastrado ainda.";
+            if (st) {
+                filesEmpty.textContent = `Nenhum recurso encontrado para "${searchTerm}"`;
+            } else if (filteredFiles && filteredFiles.length > 0) {
+                filesEmpty.textContent =
+                    layoutFilter === "groups"
+                        ? "Não há grupos (pastas) para mostrar com estes filtros. Experimente «Todos» ou «Ficheiros únicos»."
+                        : layoutFilter === "standalone"
+                          ? "Não há ficheiros únicos para mostrar com estes filtros. Experimente «Todos» ou «Grupos»."
+                          : "Nenhum recurso cadastrado ainda.";
+            } else {
+                filesEmpty.textContent = "Nenhum recurso cadastrado ainda.";
+            }
             filesEmpty.style.display = "block";
         }
         filesList.style.display = "none";
@@ -698,7 +1247,7 @@ function closeFileViewer() {
     const modal = document.getElementById("file-viewer-modal");
     if (modal) {
         modal.classList.remove("active");
-        document.body.style.overflow = "";
+        unlockBodyScrollIfAllowed();
     }
 }
 
@@ -710,199 +1259,225 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// Fechar modal com ESC
+// Fechar painéis com ESC (ordem: renomear modal deixa o próprio handler; depois edição; grupo; visualizador)
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-        closeFileViewer();
+    if (e.key !== "Escape") return;
+    const renameModal = document.getElementById("group-rename-modal");
+    if (renameModal && renameModal.classList.contains("active")) return;
+    const editOverlay = document.getElementById("resource-edit-overlay");
+    if (editOverlay && editOverlay.classList.contains("is-open")) {
+        e.preventDefault();
+        if (editingFileId != null) cancelEdit(editingFileId);
+        return;
     }
+    const groupOverlay = document.getElementById("group-folder-overlay");
+    if (groupOverlay && groupOverlay.classList.contains("is-open")) {
+        e.preventDefault();
+        closeGroupFolderDrawer();
+        return;
+    }
+    closeFileViewer();
 });
 
-// Estado de edição
+// Estado de edição (painel lateral)
 let editingFileId = null;
 
-function editFile(file) {
-    // Se já está editando outro arquivo, cancela a edição anterior
-    if (editingFileId && editingFileId !== file.id) {
-        cancelEdit(editingFileId);
+function closeResourceEditDrawer() {
+    const mount = document.getElementById("resource-edit-mount");
+    if (mount) mount.innerHTML = "";
+    const overlay = document.getElementById("resource-edit-overlay");
+    if (overlay) {
+        overlay.classList.remove("is-open");
+        overlay.setAttribute("aria-hidden", "true");
     }
-    
-    // Se já está editando este arquivo, cancela
-    if (editingFileId === file.id) {
+    unlockBodyScrollIfAllowed();
+}
+
+function openResourceEditDrawer() {
+    const overlay = document.getElementById("resource-edit-overlay");
+    if (!overlay) return;
+    overlay.classList.add("is-open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+}
+
+function setupResourceEditDrawer() {
+    const backdrop = document.getElementById("resource-edit-backdrop");
+    const closeBtn = document.getElementById("resource-edit-close");
+    if (backdrop) {
+        backdrop.addEventListener("click", () => {
+            if (editingFileId != null) cancelEdit(editingFileId);
+            else closeResourceEditDrawer();
+        });
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            if (editingFileId != null) cancelEdit(editingFileId);
+            else closeResourceEditDrawer();
+        });
+    }
+}
+
+function editFile(file) {
+    const overlay = document.getElementById("resource-edit-overlay");
+    if (overlay && overlay.classList.contains("is-open") && editingFileId === file.id) {
         cancelEdit(file.id);
         return;
     }
-    
+
+    if (editingFileId != null && editingFileId !== file.id) {
+        cancelEdit(editingFileId);
+    }
+
+    const mount = document.getElementById("resource-edit-mount");
+    const subEl = document.getElementById("resource-edit-sub");
+    if (!mount) return;
+
     editingFileId = file.id;
-    
-    // Encontra o item na lista
-    const items = document.querySelectorAll('.resource-item');
-    let itemElement = null;
-    items.forEach(item => {
-        if (String(item.dataset.fileId) === String(file.id)) {
-            itemElement = item;
-        }
-    });
-    
-    if (!itemElement) return;
-    
-    // Adiciona classe de edição
-    itemElement.classList.add('editing');
-    
-    // Encontra elementos
-    const titleEl = itemElement.querySelector('.resource-title');
-    const tagsEl = itemElement.querySelector('.resource-tags');
-    const actionsEl = itemElement.querySelector('.resource-actions');
-    
-    if (!titleEl || !actionsEl) return;
-    
-    // Salva valores originais
-    const originalTitle = file.title || '';
-    const originalTags = file.tags || '';
-    const originalDescription = file.description || '';
-    
-    // Cria inputs de edição
-    const titleInput = document.createElement('input');
-    titleInput.type = 'text';
-    titleInput.className = 'edit-input edit-title-input';
+
+    const ft = (file.file_type || "").toLowerCase();
+    const typeLabel =
+        ft === "pdf" ? "PDF" : ft === "image" ? "Imagem" : ft === "gif" ? "GIF" : (file.file_type || "Recurso").toUpperCase();
+    if (subEl) {
+        subEl.textContent = typeLabel + (file.group_id ? " · Grupo" : "");
+    }
+
+    const originalTitle = file.title || "";
+    const originalTags = file.tags || "";
+    const originalDescription = file.description || "";
+
+    const formPanel = document.createElement("div");
+    formPanel.className = "resource-edit-form";
+    formPanel.setAttribute("role", "region");
+    formPanel.setAttribute("aria-label", "Editar recurso");
+
+    const fieldsWrap = document.createElement("div");
+    fieldsWrap.className = "resource-edit-fields";
+
+    const idSuffix = String(file.id);
+
+    const titleInput = document.createElement("input");
+    titleInput.type = "text";
+    titleInput.id = "resource-edit-title-" + idSuffix;
+    titleInput.className = "resource-edit-input edit-title-input";
     titleInput.value = originalTitle;
-    titleInput.placeholder = 'Título do arquivo';
-    
-    const tagsInput = document.createElement('input');
-    tagsInput.type = 'text';
-    tagsInput.className = 'edit-input edit-tags-input';
-    tagsInput.value = originalTags;
-    tagsInput.placeholder = 'Tags (separadas por vírgula)';
+    titleInput.placeholder = "Nome visível na biblioteca";
+    titleInput.autocomplete = "off";
 
-    const descInput = document.createElement('textarea');
-    descInput.className = 'edit-input edit-desc-input';
+    const tagsInId = "resource-edit-tags-in-" + idSuffix;
+    const tagsRoot = document.createElement("div");
+    tagsRoot.className = "tags-editor";
+    const tagsHidden = document.createElement("input");
+    tagsHidden.type = "hidden";
+    tagsHidden.className = "edit-tags-input";
+    tagsHidden.value = originalTags;
+    createTagsEditor(tagsRoot, tagsHidden, { max: MAX_TAGS, inputId: tagsInId });
+
+    const descInput = document.createElement("textarea");
+    descInput.id = "resource-edit-desc-" + idSuffix;
+    descInput.className = "resource-edit-textarea edit-desc-input";
     descInput.value = originalDescription;
-    descInput.placeholder = 'Descrição para a IA (opcional)';
-    descInput.rows = 2;
-    
-    // Substitui título
-    const titleContainer = titleEl.parentElement;
-    titleEl.style.display = 'none';
-    titleInput.style.display = 'block';
-    titleContainer.insertBefore(titleInput, titleEl);
-    
-    // Substitui tags
-    if (tagsEl) {
-        tagsEl.style.display = 'none';
-        tagsInput.style.display = 'block';
-        tagsEl.parentElement.insertBefore(tagsInput, tagsEl);
-    } else {
-        // Se não tinha tags, adiciona o input
-        const infoEl = itemElement.querySelector('.resource-info');
-        if (infoEl) {
-            tagsInput.style.display = 'block';
-            infoEl.appendChild(tagsInput);
+    descInput.placeholder = "Contexto para o assistente usar nas respostas (opcional).";
+    descInput.rows = 5;
+
+    function addField(labelMain, labelHint, control) {
+        const field = document.createElement("div");
+        field.className = "resource-edit-field";
+        const lab = document.createElement("label");
+        lab.className = "resource-edit-label";
+        if (control.id) lab.htmlFor = control.id;
+        const spanMain = document.createElement("span");
+        spanMain.className = "resource-edit-label-main";
+        spanMain.textContent = labelMain;
+        lab.appendChild(spanMain);
+        if (labelHint) {
+            const spanHint = document.createElement("span");
+            spanHint.className = "resource-edit-label-hint";
+            spanHint.textContent = labelHint;
+            lab.appendChild(spanHint);
         }
+        field.appendChild(lab);
+        field.appendChild(control);
+        fieldsWrap.appendChild(field);
     }
 
-    const infoForDesc = itemElement.querySelector('.resource-info');
-    if (infoForDesc) {
-        descInput.style.display = 'block';
-        infoForDesc.appendChild(descInput);
-    }
-    
-    // Cria botões de ação
-    const editActions = document.createElement('div');
-    editActions.className = 'edit-actions';
-    
-    const btnSave = document.createElement('button');
-    btnSave.type = 'button';
-    btnSave.className = 'btn-small btn-save-edit';
-    btnSave.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar';
-    btnSave.addEventListener('click', () => saveEdit(file.id, titleInput.value, tagsInput.value, descInput.value, originalTitle, originalTags, originalDescription));
-    
-    const btnCancel = document.createElement('button');
-    btnCancel.type = 'button';
-    btnCancel.className = 'btn-small btn-cancel-edit';
-    btnCancel.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar';
-    btnCancel.addEventListener('click', () => cancelEdit(file.id));
-    
-    editActions.appendChild(btnSave);
+    addField("Título", "", titleInput);
+    const tagsField = document.createElement("div");
+    tagsField.className = "resource-edit-field";
+    const tagsLab = document.createElement("label");
+    tagsLab.className = "resource-edit-label";
+    tagsLab.htmlFor = tagsInId;
+    const tagsLabMain = document.createElement("span");
+    tagsLabMain.className = "resource-edit-label-main";
+    tagsLabMain.textContent = "Tags";
+    const tagsLabHint = document.createElement("span");
+    tagsLabHint.className = "resource-edit-label-hint";
+    tagsLabHint.textContent =
+        "Adicione com + ou Enter. Pode colar várias de uma vez separadas por vírgula. Máx. " + MAX_TAGS + ".";
+    tagsLab.appendChild(tagsLabMain);
+    tagsLab.appendChild(tagsLabHint);
+    tagsField.appendChild(tagsLab);
+    tagsField.appendChild(tagsRoot);
+    tagsField.appendChild(tagsHidden);
+    fieldsWrap.appendChild(tagsField);
+
+    addField("Descrição", "Usada pela IA para saber quando e como usar este ficheiro.", descInput);
+
+    const editActions = document.createElement("div");
+    editActions.className = "resource-edit-actions";
+
+    const btnSave = document.createElement("button");
+    btnSave.type = "button";
+    btnSave.className = "btn-small btn-save-edit";
+    btnSave.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar alterações';
+    btnSave.addEventListener("click", () =>
+        saveEdit(file.id, titleInput.value, tagsHidden.value, descInput.value, originalTitle, originalTags, originalDescription)
+    );
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "btn-small btn-cancel-edit";
+    btnCancel.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar';
+    btnCancel.addEventListener("click", () => cancelEdit(file.id));
+
     editActions.appendChild(btnCancel);
-    
-    // Esconde ações originais e mostra ações de edição
-    actionsEl.style.display = 'none';
-    actionsEl.parentElement.insertBefore(editActions, actionsEl);
-    
-    // Foca no input de título
-    setTimeout(() => titleInput.focus(), 100);
-    
-    // Salva ao pressionar Enter no título
-    titleInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+    editActions.appendChild(btnSave);
+
+    formPanel.appendChild(fieldsWrap);
+    formPanel.appendChild(editActions);
+    mount.innerHTML = "";
+    mount.appendChild(formPanel);
+
+    openResourceEditDrawer();
+
+    setTimeout(() => titleInput.focus(), 80);
+
+    titleInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
             e.preventDefault();
-            tagsInput.focus();
-        }
-    });
-    
-    // Salva ao pressionar Enter nas tags ou Escape para cancelar
-    tagsInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveEdit(file.id, titleInput.value, tagsInput.value, descInput.value, originalTitle, originalTags, originalDescription);
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancelEdit(file.id);
+            const ti = mount.querySelector(".tags-editor-input");
+            if (ti) ti.focus();
         }
     });
 
-    descInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+    formPanel.addEventListener("keydown", e => {
+        if (e.key === "Escape") {
             e.preventDefault();
             cancelEdit(file.id);
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            e.preventDefault();
+            saveEdit(file.id, titleInput.value, tagsHidden.value, descInput.value, originalTitle, originalTags, originalDescription);
         }
     });
 }
 
 function cancelEdit(fileId) {
     editingFileId = null;
-    
-    const items = document.querySelectorAll('.resource-item');
-    items.forEach(item => {
-        if (String(item.dataset.fileId) === String(fileId)) {
-            item.classList.remove('editing');
-            
-            // Remove inputs
-            const titleInput = item.querySelector('.edit-title-input');
-            const tagsInput = item.querySelector('.edit-tags-input');
-            const editActions = item.querySelector('.edit-actions');
-            
-            if (titleInput) {
-                const titleEl = item.querySelector('.resource-title');
-                if (titleEl) {
-                    titleEl.style.display = '';
-                    titleInput.remove();
-                }
-            }
-            
-            if (tagsInput) {
-                const tagsEl = item.querySelector('.resource-tags');
-                if (tagsEl) {
-                    tagsEl.style.display = '';
-                    tagsInput.remove();
-                } else {
-                    tagsInput.remove();
-                }
-            }
-
-            const descInputEl = item.querySelector('.edit-desc-input');
-            if (descInputEl) {
-                descInputEl.remove();
-            }
-            
-            if (editActions) {
-                const actionsEl = item.querySelector('.resource-actions');
-                if (actionsEl) {
-                    actionsEl.style.display = '';
-                    editActions.remove();
-                }
-            }
-        }
-    });
+    closeResourceEditDrawer();
+    document.querySelectorAll(".resource-item.editing").forEach(el => el.classList.remove("editing"));
 }
 
 async function saveEdit(fileId, newTitle, newTags, newDescription, originalTitle, originalTags, originalDescription) {
@@ -914,12 +1489,9 @@ async function saveEdit(fileId, newTitle, newTags, newDescription, originalTitle
         cancelEdit(fileId);
         return;
     }
-    
-    const item = document.querySelector(`.resource-item[data-file-id="${fileId}"]`);
-    if (!item) return;
-    
-    // Mostra loading
-    const btnSave = item.querySelector('.btn-save-edit');
+
+    const mount = document.getElementById("resource-edit-mount");
+    const btnSave = mount && mount.querySelector(".btn-save-edit");
     if (btnSave) {
         btnSave.disabled = true;
         btnSave.innerHTML = 'Salvando...';
@@ -960,20 +1532,18 @@ async function saveEdit(fileId, newTitle, newTags, newDescription, originalTitle
         
         // Recarrega a lista e estatísticas
         await Promise.all([loadFiles(), loadFileStats()]);
-        
-        // Feedback visual de sucesso
+
         if (btnSave) {
-            btnSave.innerHTML = 'Salvo!';
-            setTimeout(() => {
-                cancelEdit(fileId);
-            }, 500);
+            btnSave.innerHTML = "Salvo!";
+            setTimeout(() => cancelEdit(fileId), 500);
+        } else {
+            cancelEdit(fileId);
         }
-        
     } catch (err) {
         // Erro ao editar recurso
         if (btnSave) {
             btnSave.disabled = false;
-            btnSave.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar';
+            btnSave.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar alterações';
         }
         alert("Erro ao atualizar recurso: " + (err.message || "Erro desconhecido"));
     }
@@ -1020,6 +1590,11 @@ if (!initElements()) {
     setTimeout(init, 100);
     return;
 }
+
+initTagsEditors();
+setupGroupRenameModal();
+setupGroupFolderDrawer();
+setupResourceEditDrawer();
 
 // Elementos inicializados
 
@@ -1079,6 +1654,7 @@ if (uploadForm) {
             // Arquivo enviado com sucesso
             uploadStatus.textContent = "Recurso adicionado com sucesso.";
             uploadForm.reset();
+            if (tagsEditorSingle) tagsEditorSingle.clear();
             if (window.clearFileInput) window.clearFileInput();
             await Promise.all([loadFiles(), loadFileStats()]);
             setTimeout(() => { uploadStatus.textContent = ""; }, 2000);
@@ -1103,7 +1679,19 @@ filterButtons.forEach(btn => {
         btn.classList.add("active");
         // Atualiza filtro
         currentTypeFilter = btn.dataset.filter || "all";
+        updateLayoutFilterVisibility();
         // Reaplica filtros
+        const searchTerm = fileSearch ? fileSearch.value.toLowerCase().trim() : "";
+        filterFiles(searchTerm);
+    });
+});
+
+const layoutFilterBtns = document.querySelectorAll(".layout-filter-btn");
+layoutFilterBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        layoutFilterBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentLayoutFilter = btn.dataset.layoutFilter || "all";
         const searchTerm = fileSearch ? fileSearch.value.toLowerCase().trim() : "";
         filterFiles(searchTerm);
     });
@@ -1443,8 +2031,26 @@ function setupResourceUploadPanels() {
     const groupDesc = document.getElementById("group-desc-container");
     const formGroup = document.getElementById("upload-form-group");
     const uploadGroupStatus = document.getElementById("upload-group-status");
+    const groupExistingId = document.getElementById("group-existing-id");
+    const groupUploadBanner = document.getElementById("group-upload-target-banner");
+    const groupUploadBannerClear = document.getElementById("group-upload-target-clear");
+    const groupTitleInput = document.getElementById("group-title");
+    const groupTagsShell = document.getElementById("group-tags-editor-root");
+
+    function clearAddToGroupTarget() {
+        if (groupExistingId) groupExistingId.value = "";
+        if (groupUploadBanner) groupUploadBanner.style.display = "none";
+        if (groupTitleInput) {
+            groupTitleInput.disabled = false;
+            groupTitleInput.placeholder = "Ex: Passo a passo cadastro";
+        }
+        if (groupTagsShell) {
+            groupTagsShell.classList.remove("opacity-50", "pointer-events-none");
+        }
+    }
 
     function activateSingle() {
+        clearAddToGroupTarget();
         if (tabSingle) {
             tabSingle.className = "flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 shadow-sm border border-gray-100";
         }
@@ -1455,7 +2061,8 @@ function setupResourceUploadPanels() {
         if (panelGroup) panelGroup.classList.add("hidden");
     }
 
-    function activateGroup() {
+    function activateGroup(preserveAddTarget) {
+        if (!preserveAddTarget) clearAddToGroupTarget();
         if (tabGroup) {
             tabGroup.className = "flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 shadow-sm border border-gray-100";
         }
@@ -1466,8 +2073,40 @@ function setupResourceUploadPanels() {
         if (panelSingle) panelSingle.classList.add("hidden");
     }
 
+    function prepareAddToExistingGroup(groupId, groupLabel) {
+        if (groupExistingId) groupExistingId.value = groupId || "";
+        if (groupUploadBanner) {
+            groupUploadBanner.style.display = "block";
+            const lab = groupUploadBanner.querySelector(".group-upload-target-label");
+            if (lab) lab.textContent = groupLabel || "(grupo)";
+        }
+        if (groupTitleInput) {
+            groupTitleInput.disabled = true;
+            groupTitleInput.value = "";
+            groupTitleInput.placeholder = "Usa o nome do grupo (renomear na pasta)";
+        }
+        if (groupTagsShell) {
+            groupTagsShell.classList.add("opacity-50", "pointer-events-none");
+        }
+        activateGroup(true);
+        const uploadSection = document.getElementById("upload-form-group");
+        const sidebar = uploadSection && uploadSection.closest(".sidebar-section");
+        if (sidebar) {
+            sidebar.open = true;
+            sidebar.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+
+    window.prepareAddToExistingGroup = prepareAddToExistingGroup;
+    window.clearAddToGroupTarget = clearAddToGroupTarget;
+
     if (tabSingle) tabSingle.addEventListener("click", activateSingle);
-    if (tabGroup) tabGroup.addEventListener("click", activateGroup);
+    if (tabGroup) tabGroup.addEventListener("click", () => activateGroup(false));
+    if (groupUploadBannerClear) {
+        groupUploadBannerClear.addEventListener("click", () => {
+            clearAddToGroupTarget();
+        });
+    }
 
     function rebuildGroupDescFields(files) {
         if (!groupDesc) return;
@@ -1520,28 +2159,22 @@ function setupResourceUploadPanels() {
             fd.append("title", title);
             fd.append("tags", tags);
             fd.append("descriptions_json", JSON.stringify(descriptions));
+            const exGid = groupExistingId && groupExistingId.value ? groupExistingId.value.trim() : "";
+            if (exGid) fd.append("existing_group_id", exGid);
 
             uploadGroupStatus.textContent = "Enviando...";
             try {
-                const headers = getAuthHeadersFormData();
-                const res = await fetch("/admin/files/upload-group", {
-                    method: "POST",
-                    headers: headers,
-                    body: fd,
-                });
-                if (!res.ok) {
-                    if (res.status === 401) {
-                        window.location.href = "/login";
-                        return;
-                    }
-                    const err = await res.text();
-                    uploadGroupStatus.textContent = "Erro: " + (err || res.statusText);
+                const result = await postUploadGroupFormData(fd);
+                if (!result.ok) {
+                    if (result.error === "auth") return;
+                    uploadGroupStatus.textContent = "Erro: " + (result.error || "falha");
                     uploadGroupStatus.classList.add("error");
                     return;
                 }
-                await res.json();
-                uploadGroupStatus.textContent = "Grupo adicionado com sucesso.";
+                uploadGroupStatus.textContent = exGid ? "Ficheiros adicionados ao grupo." : "Grupo adicionado com sucesso.";
+                clearAddToGroupTarget();
                 formGroup.reset();
+                if (tagsEditorGroup) tagsEditorGroup.clear();
                 if (groupDesc) groupDesc.innerHTML = "";
                 await Promise.all([loadFiles(), loadFileStats()]);
                 setTimeout(() => { uploadGroupStatus.textContent = ""; }, 2500);

@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import FileModel
-from app.schemas import FileOut, FileUpdateBody
+from app.schemas import FileOut, FileUpdateBody, GroupRenameBody
 from app.auth import get_current_user
-from app.utils import build_file_url, ensure_upload_dirs, log_audit
+from app.utils import build_file_url, ensure_upload_dirs, log_audit, normalize_tags_csv
 from app.config import settings
 from app.client_ip import get_client_ip
 
@@ -161,7 +161,7 @@ async def upload_file(
         original_name=file.filename or safe_name,
         file_type=file_type,
         title=title or (file.filename or safe_name),
-        tags=tags,
+        tags=normalize_tags_csv(tags),
         description=(description or "").strip() or None,
         group_id=None,
     )
@@ -197,12 +197,15 @@ async def upload_group_media(
     title: str = Form(""),
     tags: str = Form(""),
     descriptions_json: str = Form("[]"),
+    existing_group_id: str = Form(""),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
     """
     Upload de várias imagens (PNG/JPEG/WebP) e/ou GIFs como um grupo: mesmo group_id,
     título/tags compartilhados, descrição individual por arquivo (JSON na ordem dos ficheiros).
+    Se `existing_group_id` for enviado, os ficheiros são acrescentados a esse grupo (título e tags
+    iguais aos do primeiro ficheiro já existente no grupo).
     PDF não é aceito neste endpoint.
     """
     if not files:
@@ -221,7 +224,23 @@ async def upload_group_media(
     descriptions = descriptions[: len(files)]
 
     pdf_dir, gif_dir, image_dir = ensure_upload_dirs()
-    group_id = str(uuid.uuid4())
+    gid_existing = (existing_group_id or "").strip()
+    shared_title = ""
+    if gid_existing:
+        existing_rows = db.query(FileModel).filter(FileModel.group_id == gid_existing).all()
+        if not existing_rows:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Grupo não encontrado.",
+            )
+        group_id = gid_existing
+        first = existing_rows[0]
+        shared_title = (first.title or "").strip()
+        tags_norm = normalize_tags_csv(first.tags or "")
+    else:
+        group_id = str(uuid.uuid4())
+        tags_norm = normalize_tags_csv(tags)
+
     out: List[FileOut] = []
 
     for idx, up in enumerate(files):
@@ -235,12 +254,13 @@ async def upload_group_media(
         _validate_file_content(content, file_type)
 
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        uid_suffix = ("_" + uuid.uuid4().hex[:8]) if gid_existing else ""
         if file_type == "gif":
-            safe_name = f"{timestamp}_{group_id[:8]}_{idx}.gif"
+            safe_name = f"{timestamp}_{group_id[:8]}_{idx}{uid_suffix}.gif"
             folder = gif_dir
         else:
             ext = _ext_for_image(content, up.filename or "")
-            safe_name = f"{timestamp}_{group_id[:8]}_{idx}{ext}"
+            safe_name = f"{timestamp}_{group_id[:8]}_{idx}{uid_suffix}{ext}"
             folder = image_dir
         filepath = os.path.join(folder, safe_name)
 
@@ -248,14 +268,17 @@ async def upload_group_media(
             f.write(content)
 
         desc = str(descriptions[idx] if idx < len(descriptions) else "").strip() or None
-        t = title.strip() or (up.filename or safe_name)
+        if gid_existing:
+            t = shared_title or (up.filename or safe_name)
+        else:
+            t = title.strip() or (up.filename or safe_name)
 
         db_file = FileModel(
             filename=safe_name,
             original_name=up.filename or safe_name,
             file_type=file_type,
             title=t,
-            tags=tags,
+            tags=tags_norm,
             description=desc,
             group_id=group_id,
         )
@@ -274,14 +297,24 @@ async def upload_group_media(
             )
         )
 
-    log_audit(
-        db,
-        "file_group_uploaded",
-        "arquivo",
-        f"Grupo imagens/GIFs ({len(out)} arquivos) group_id={group_id}: {title or 'sem título'}",
-        user=current_user.get("sub"),
-        ip=get_client_ip(request),
-    )
+    if gid_existing:
+        log_audit(
+            db,
+            "file_group_appended",
+            "arquivo",
+            f"+{len(out)} ficheiros ao grupo group_id={group_id}: {shared_title or 'sem título'}",
+            user=current_user.get("sub"),
+            ip=get_client_ip(request),
+        )
+    else:
+        log_audit(
+            db,
+            "file_group_uploaded",
+            "arquivo",
+            f"Grupo imagens/GIFs ({len(out)} arquivos) group_id={group_id}: {title or 'sem título'}",
+            user=current_user.get("sub"),
+            ip=get_client_ip(request),
+        )
     return out
 
 
@@ -311,6 +344,53 @@ def list_files(
     return result
 
 
+@router.put("/group/{group_id}")
+def rename_group(
+    group_id: str,
+    body: GroupRenameBody,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Define o nome da pasta/grupo: actualiza o título de todos os ficheiros com este group_id.
+    """
+    gid = (group_id or "").strip()
+    if not gid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="group_id inválido.",
+        )
+    t = (body.title or "").strip()
+    if not t:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O título do grupo não pode ser vazio.",
+        )
+
+    rows = db.query(FileModel).filter(FileModel.group_id == gid).all()
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grupo não encontrado.",
+        )
+
+    for f in rows:
+        f.title = t
+    db.commit()
+
+    log_audit(
+        db,
+        "group_renamed",
+        "arquivo",
+        f"Grupo {gid[:8]}…: título → {t} ({len(rows)} ficheiros)",
+        user=current_user.get("sub"),
+        ip=get_client_ip(request),
+    )
+
+    return {"ok": True, "group_id": gid, "title": t, "updated": len(rows)}
+
+
 @router.put("/{file_id}")
 def update_file(
     file_id: int,
@@ -331,9 +411,12 @@ def update_file(
     if body.title is not None and body.title != file.title:
         changes.append(f"título: {file.title} → {body.title}")
         file.title = body.title
-    if body.tags is not None and body.tags != file.tags:
-        changes.append(f"tags: {file.tags} → {body.tags}")
-        file.tags = body.tags
+    if body.tags is not None:
+        norm_tags = normalize_tags_csv(body.tags)
+        prev = file.tags or ""
+        if norm_tags != prev:
+            changes.append(f"tags: {file.tags} → {norm_tags}")
+            file.tags = norm_tags
     if body.description is not None:
         norm_desc = (body.description or "").strip() or None
         if norm_desc != file.description:

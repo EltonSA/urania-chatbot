@@ -12,6 +12,11 @@ class FileUpdateBody(BaseModel):
     description: Optional[str] = None
 
 
+class GroupRenameBody(BaseModel):
+    """Renomear pasta/grupo: mesmo título em todos os ficheiros com o mesmo group_id."""
+    title: str
+
+
 class FileOut(BaseModel):
     """Schema de saída para arquivo"""
     id: int

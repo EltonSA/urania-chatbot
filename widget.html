@@ -174,6 +174,13 @@
     body.embed-mode .status-line{font-size:11px;margin-top:3px}
     body.embed-mode .gif-thumb{max-width:100%}
     body.embed-mode .pdf-inline-frame{height:280px}
+    /* Iframe largo (ex.: widget em tela cheia no site): GIF/imagem usa mais da largura — até ~1200px */
+    body.embed-mode.embed-wide .bubble.bot.with-media .attachments{
+      max-width:min(94vw, 1200px);
+    }
+    body.embed-mode.embed-wide .bubble.bot.with-media .gif-thumb{
+      max-width:min(1200px, 100%);
+    }
 
     @media(max-width:720px){
       .top-right{display:none}
@@ -460,6 +467,20 @@
     if(iframe){
       iframe.addEventListener("load", function(){ setTimeout(run, 200); }, { once: true });
     }
+  }
+
+  let _embedLayoutResizeTimer = null;
+  function syncEmbedWideClassAndBubbles(){
+    if(!document.body.classList.contains("embed-mode")) return;
+    document.body.classList.toggle("embed-wide", window.innerWidth >= 600);
+    document.querySelectorAll(".bubble.bot.with-media").forEach(function(b){ syncBubbleWidthToMedia(b); });
+  }
+  if(isEmbedded){
+    syncEmbedWideClassAndBubbles();
+    window.addEventListener("resize", function(){
+      clearTimeout(_embedLayoutResizeTimer);
+      _embedLayoutResizeTimer = setTimeout(syncEmbedWideClassAndBubbles, 100);
+    });
   }
 
   function renderAttachments(containerEl, attachments=[]){
