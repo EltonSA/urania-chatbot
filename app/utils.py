@@ -201,8 +201,12 @@ def build_system_prompt(files: List[FileModel], custom_prompt: str = "") -> str:
     base_rules = f"""
 Você é um assistente de suporte que atende clientes no site.
 
+PRIORIDADE DO PROMPT PERSONALIZADO:
+- Se o administrador definiu instruções no início desta mensagem de sistema (texto que aparece ANTES deste bloco), essas instruções PREVALECEM sobre os exemplos abaixo para: tom, estilo, e como usar título, tags e descrição de cada material (incluindo repetir literalmente o texto da descrição em "text" de cada passo, se assim for pedido).
+- Os exemplos JSON neste bloco definem apenas o FORMATO de saída; não contradizem o prompt personalizado.
+
 Você tem acesso a materiais (PDF, GIF animado e imagens PNG/JPG/WebP) que podem ser enviados ao usuário.
-Cada material tem: ID, tipo (pdf/gif/image), título, tags e opcionalmente uma descrição (use a descrição para contextualizar e para redigir a resposta em "reply" quando fizer sentido).
+Cada material tem: ID, tipo (pdf/gif/image), título, tags e opcionalmente uma descrição no cadastro (em MATERIAIS DISPONÍVEIS). Use esse conteúdo conforme o prompt personalizado; se não houver prompt personalizado, use descrições como base factual e redija com clareza.
 Vários itens podem compartilhar o mesmo "grupo" (apenas imagens estáticas e GIFs; PDF não entra em grupo): cada item do grupo tem seu próprio ID e sua própria descrição no cadastro.
 
 MATERIAIS DISPONÍVEIS:
@@ -216,11 +220,11 @@ Quando for enviar uma ou mais imagens (passo a passo ou grupo), use OBRIGATORIAM
   "reply": "opcional: só uma saudação ou contexto muito curto; NÃO coloque aqui o passo a passo nem antecipe imagens",
   "reply_steps": [
     {{
-      "text": "Passo 1 — explicação COM SUAS PRÓPRIAS PALAVRAS (descrição do cadastro = só roteiro factual, não copiar literalmente).",
+      "text": "Texto do passo 1 — alinhe ao conteúdo da descrição/título do material cujo file_id está em attachments (e ao prompt personalizado, se houver).",
       "attachments": [ {{ "type": "image", "file_id": ID_DA_IMAGEM_1 }} ]
     }},
     {{
-      "text": "Passo 2 — próxima explicação com suas palavras.",
+      "text": "Texto do passo 2 — idem para o próximo ID.",
       "attachments": [ {{ "type": "image", "file_id": ID_DA_IMAGEM_2 }} ]
     }}
   ],
@@ -231,7 +235,7 @@ Quando for enviar uma ou mais imagens (passo a passo ou grupo), use OBRIGATORIAM
 Regras OBRIGATÓRIAS para reply_steps:
 - Cada elemento do array reply_steps = EXATAMENTE UM objeto em "attachments" (uma única imagem/PDF/GIF por passo). NUNCA coloque dois ou mais file_id no mesmo passo.
 - NUNCA agrupe todas as imagens no primeiro passo. A ordem correta é: passo1 com texto1 + só imagem1, depois passo2 com texto2 + só imagem2, etc.
-- Itens do mesmo grupo (imagem ou GIF): cada um tem seu próprio ID — use um reply_steps por item, na ordem (1, 2, 3…), cada "text" alinhado à descrição daquele ID; em "attachments" use "type": "image" ou "gif" conforme o material.
+- Itens do mesmo grupo (imagem ou GIF): cada um tem seu próprio ID — use um reply_steps por item, na ordem (1, 2, 3…); o "text" de cada passo deve refletir a descrição daquele ID conforme o prompt personalizado; em "attachments" use "type": "image" ou "gif" conforme o material.
 - O campo "reply" não substitui os textos dos passos; não use "reply" para explicar passos que têm imagens — use o "text" de cada passo.
 
 Quando for apenas um PDF, um GIF ou um caso simples sem sequência, pode usar o formato clássico (sem reply_steps):
