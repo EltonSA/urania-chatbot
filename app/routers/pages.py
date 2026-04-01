@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+
+from app.auth import ROLE_ADMIN, get_user_from_request_cookie_or_bearer
 from app.config import settings
 from app.database import get_db
 from app.utils import get_setting
@@ -85,10 +87,13 @@ def dashboard_page(request: Request):
 
 
 @router.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request):
-    """Página de configurações do sistema - Requer autenticação"""
-    if not verify_token_from_cookie_or_header(request):
+def settings_page(request: Request, db: Session = Depends(get_db)):
+    """Página de configurações — apenas administrador."""
+    user = get_user_from_request_cookie_or_bearer(request, db)
+    if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    if user.role != ROLE_ADMIN:
+        return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
     return FileResponse(os.path.join(BASE_DIR, "settings.html"))
 
 

@@ -12,7 +12,7 @@ from openpyxl import Workbook
 
 from app.database import get_db
 from app.schemas import PromptBody, SystemSettingsBody
-from app.auth import get_current_user
+from app.auth import get_current_user, require_admin
 from app.utils import (
     get_setting,
     set_setting,
@@ -296,7 +296,7 @@ def files_stats(
 @router.get("/system-settings")
 def get_system_settings(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_admin),
 ):
     """Obtém configurações do sistema. Requer autenticação"""
     fav_path, _ = resolve_branding_favicon()
@@ -322,7 +322,7 @@ def save_system_settings(
     body: SystemSettingsBody,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_admin),
 ):
     """Salva configurações do sistema. Requer autenticação"""
     changes = []
@@ -404,7 +404,7 @@ async def upload_branding_favicon(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Substitui o favicon do site (.ico ou .png, máx. 512 KB)."""
     fn = (file.filename or "").lower()
@@ -455,7 +455,7 @@ async def upload_branding_favicon(
 def delete_branding_favicon(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Remove o favicon personalizado (volta ao /static/favicon.ico)."""
     d = branding_dir_path()
@@ -510,7 +510,7 @@ async def upload_branding_logo(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Logo do painel e login (.png, .jpg, .jpeg, .webp, máx. 2 MB)."""
     ext = _detect_branding_image_ext(file.filename, file.content_type or "")
@@ -549,7 +549,7 @@ async def upload_branding_logo(
 def delete_branding_logo(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Remove a logo personalizada (volta ao /static/logo-urania.jpg)."""
     d = branding_dir_path()
@@ -579,7 +579,7 @@ async def upload_branding_chat_avatar(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Avatar do assistente no chat (.png, .jpg, .jpeg, .webp, máx. 2 MB)."""
     ext = _detect_branding_image_ext(file.filename, file.content_type or "")
@@ -618,7 +618,7 @@ async def upload_branding_chat_avatar(
 def delete_branding_chat_avatar(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Remove só o avatar do chat (passa a usar a logo do painel ou o estático)."""
     d = branding_dir_path()
@@ -647,7 +647,7 @@ def delete_branding_chat_avatar(
 def reset_chat_theme_admin(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Restaura o tema do chat para as cores padrão."""
     reset_chat_theme(db)
@@ -666,7 +666,7 @@ def reset_chat_theme_admin(
 def reset_chat_welcome_admin(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
 ):
     """Restaura a mensagem inicial do /widget ao texto padrão."""
     reset_chat_welcome_message(db)
@@ -687,7 +687,7 @@ def get_audit_logs(
     limit: int = 50,
     category: str = None,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_admin),
 ):
     """Obtém logs de auditoria com paginação. Requer autenticação"""
     query = db.query(AuditLogModel).order_by(desc(AuditLogModel.created_at))
@@ -785,7 +785,7 @@ def export_excel(
 def create_backup(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_admin),
 ):
     """
     Cria um backup completo do sistema (banco, arquivos, configurações).

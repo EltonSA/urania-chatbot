@@ -77,7 +77,7 @@ def init_db():
     Com múltiplos workers (uvicorn --workers 4), mais de um processo pode
     chamar init_db ao mesmo tempo; ignoramos "table already exists".
     """
-    from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel, AuditLogModel
+    from app.models import FileModel, SettingModel, ChatSessionModel, ChatEventModel, AuditLogModel, UserModel
     try:
         Base.metadata.create_all(bind=engine, checkfirst=True)
         _migrate_sqlite_files_columns()

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.schemas import LoginRequest, TokenResponse
-from app.auth import authenticate_user, create_access_token
+from app.auth import authenticate_user, create_access_token, get_current_user
 from app.config import settings
 from app.database import get_db
 from app.utils import log_audit
@@ -16,6 +16,15 @@ from app.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
+
+
+@router.get("/me")
+async def me(current_user: dict = Depends(get_current_user)):
+    """Perfil do usuário autenticado (para o painel ocultar itens por perfil)."""
+    return {
+        "username": current_user.get("username"),
+        "role": current_user.get("role"),
+    }
 
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
@@ -66,7 +75,8 @@ async def login(credentials: LoginRequest, request: Request, db: Session = Depen
 
     _check_brute_force(ip)
 
-    if not authenticate_user(credentials.username, credentials.password):
+    user = authenticate_user(db, credentials.username, credentials.password)
+    if not user:
         _record_failed_attempt(ip)
         remaining = MAX_LOGIN_ATTEMPTS - len(_failed_attempts[ip])
         log_audit(db, "login_failed", "auth", f"Tentativa com usuário: {credentials.username} (restam {remaining})", ip=ip)
@@ -80,16 +90,18 @@ async def login(credentials: LoginRequest, request: Request, db: Session = Depen
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": credentials.username},
-        expires_delta=access_token_expires
+        data={"sub": user.username, "role": user.role},
+        expires_delta=access_token_expires,
     )
 
-    log_audit(db, "login_success", "auth", user=credentials.username, ip=ip)
+    log_audit(db, "login_success", "auth", user=user.username, ip=ip)
 
     response = JSONResponse(
         content={
             "access_token": access_token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "username": user.username,
+            "role": user.role,
         }
     )
 

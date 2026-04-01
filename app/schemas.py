@@ -1,6 +1,7 @@
 """
 Schemas Pydantic para validação de dados
 """
+from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, validator
 
@@ -156,4 +157,29 @@ class TokenResponse(BaseModel):
     """Schema para resposta de token"""
     access_token: str
     token_type: str = "bearer"
+
+
+class UserCreateBody(BaseModel):
+    """Criação de usuário do painel"""
+    username: str = Field(..., min_length=1, max_length=128)
+    password: str = Field(..., min_length=4, max_length=256)
+    role: str = Field(..., pattern=r"^(admin|user)$")
+
+
+class UserUpdateBody(BaseModel):
+    """Atualização de usuário (senha e/ou perfil)"""
+    password: Optional[str] = Field(None, min_length=4, max_length=256)
+    role: Optional[str] = Field(None, pattern=r"^(admin|user)$")
+
+
+class UserOut(BaseModel):
+    """Usuário do painel (sem senha)"""
+    id: int
+    username: str
+    role: str
+    created_at: Optional[datetime] = None
+    managed_by_env: bool = False  # ADMIN_USERNAME — só altera no .env
+
+    class Config:
+        from_attributes = True
 

@@ -38,8 +38,6 @@
     @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
 
     .settings-card{background:#fff;border-radius:16px;border:1px solid rgba(229,231,235,.8);padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.04);animation:fadeIn .4s ease both}
-    .settings-card:nth-child(2){animation-delay:.05s}
-    .settings-card:nth-child(3){animation-delay:.1s}
     .card-title{font-size:16px;font-weight:700;color:#111827;display:flex;align-items:center;gap:10px}
     .card-desc{font-size:13px;color:#6b7280;margin-top:4px;line-height:1.5}
 
@@ -105,6 +103,19 @@
     .log-filter-btn{padding:5px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
     .log-filter-btn:hover{border-color:#bbf7d0;background:#fafffe}
     .log-filter-btn.active{background:#1C8B3C;color:#fff;border-color:#1C8B3C}
+
+    /* Abas horizontais (design system configurações) */
+    .settings-tab-nav{margin:0 -4px}
+    @media (min-width:640px){.settings-tab-nav{margin:0}}
+    .settings-tab-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(28,139,60,.35) transparent;padding-bottom:2px}
+    .settings-tab-scroll::-webkit-scrollbar{height:4px}
+    .settings-tab-scroll::-webkit-scrollbar-thumb{background:rgba(28,139,60,.35);border-radius:4px}
+    .settings-tab{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9999px;font-size:13px;font-weight:600;color:#64748b;background:#fff;border:1px solid #e5e7eb;cursor:pointer;transition:background .2s,border-color .2s,color .2s,box-shadow .2s;white-space:nowrap;font-family:inherit;flex-shrink:0}
+    .settings-tab:hover{border-color:#bbf7d0;color:#15803d;background:#fafffe}
+    .settings-tab.active{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border-color:#86efac;color:#14532d;box-shadow:0 1px 3px rgba(28,139,60,.12)}
+    .settings-tab-icon{width:18px;height:18px;flex-shrink:0;opacity:.9}
+    .settings-panel{animation:fadeIn .35s ease both}
+    .settings-card{border-radius:14px}
   </style>
 </head>
 <body class="min-h-screen bg-gray-50/50 font-sans text-gray-900 antialiased">
@@ -183,9 +194,9 @@
       </button>
       <div class="flex-1 min-w-0">
         <h1 class="text-base sm:text-lg font-bold tracking-tight text-gray-900 leading-tight">Configurações</h1>
-        <p class="text-[11px] text-gray-400 font-medium hidden sm:block">Personalize o comportamento do sistema</p>
+        <p id="settings-page-subtitle" class="text-[11px] text-gray-500 font-medium hidden sm:block leading-snug">Identidade: nome, logo e favicon</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div id="header-save-wrap" class="flex items-center gap-2">
         <button type="button" id="btn-save" class="btn-save">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           Salvar
@@ -196,8 +207,37 @@
 
   <!-- MAIN CONTENT -->
   <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
-    <div class="max-w-[800px] mx-auto flex flex-col gap-5">
+    <div class="max-w-[960px] mx-auto w-full">
+      <nav class="settings-tab-nav mb-6" aria-label="Seções das configurações">
+        <div class="settings-tab-scroll flex gap-2 sm:gap-2.5">
+          <button type="button" class="settings-tab active" data-tab="identity" data-subtitle="Identidade: nome, logo e favicon">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/></svg>
+            Identidade
+          </button>
+          <button type="button" class="settings-tab" data-tab="chat" data-subtitle="Chat: cores, tema e mensagem inicial">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/><path d="M12 2v20"/></svg>
+            Aparência do chat
+          </button>
+          <button type="button" class="settings-tab" data-tab="site" data-subtitle="Site: URL raiz, widget e cartão de suporte">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Site &amp; widget
+          </button>
+          <button type="button" class="settings-tab" data-tab="users" data-subtitle="Contas com acesso ao painel">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Contas
+          </button>
+          <button type="button" class="settings-tab" data-tab="backup" data-subtitle="Exportar cópia do sistema">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Backup
+          </button>
+          <button type="button" class="settings-tab" data-tab="audit" data-subtitle="Histórico de ações (auditoria)">
+            <svg class="settings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Auditoria
+          </button>
+        </div>
+      </nav>
 
+      <div id="panel-identity" class="settings-panel flex flex-col gap-5">
       <!-- Card: Nome e favicon -->
       <div class="settings-card">
         <div class="card-title">
@@ -251,7 +291,9 @@
           </div>
         </div>
       </div>
+      </div>
 
+      <div id="panel-chat" class="settings-panel hidden flex flex-col gap-5">
       <!-- Card: Tema do chat -->
       <div class="settings-card">
         <div class="card-title">
@@ -384,7 +426,9 @@
           </div>
         </div>
       </div>
+      </div>
 
+      <div id="panel-site" class="settings-panel hidden flex flex-col gap-5">
       <!-- Card: Comportamento da URL raiz -->
       <div class="settings-card">
         <div class="card-title">
@@ -458,7 +502,83 @@
           <p class="text-xs text-gray-500">Exemplo no site beta: <code class="bg-white px-1.5 py-0.5 rounded border border-gray-200">&lt;script src="https://iabeta.urania.com.br/static/chat-widget.js"&gt;&lt;/script&gt;</code></p>
         </div>
       </div>
+      </div>
 
+      <div id="panel-users" class="settings-panel hidden flex flex-col gap-5">
+      <!-- Card: Usuários do painel -->
+      <div class="settings-card">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C8B3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuários do painel
+        </div>
+        <p class="card-desc">Administradores veem esta página; demais perfis usam Recursos, Dashboard e Conversas. O usuário cujo login é o <code class="bg-gray-100 px-1 rounded text-[11px]">ADMIN_USERNAME</code> do <code class="bg-gray-100 px-1 rounded text-[11px]">.env</code> é reservado: senha e existência vêm do arquivo (reinicie o servidor após alterar). Os demais utilizadores podem ser criados e editados aqui.</p>
+
+        <div class="mt-5 overflow-x-auto border border-gray-200 rounded-xl">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-[11px] uppercase text-gray-500 font-semibold">
+              <tr>
+                <th class="px-4 py-3">Usuário</th>
+                <th class="px-4 py-3">Perfil</th>
+                <th class="px-4 py-3 text-right">Origem / ações</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-gray-100">
+          <div class="text-sm font-semibold text-gray-900 mb-3">Novo usuário</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Nome de usuário</label>
+              <input type="text" id="new-user-name" maxlength="128" class="url-input mt-0 py-2 text-sm" autocomplete="off" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Senha (mín. 4 caracteres)</label>
+              <input type="password" id="new-user-pass" class="url-input mt-0 py-2 text-sm" autocomplete="new-password" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Perfil</label>
+              <select id="new-user-role" class="url-input py-2 text-sm w-full sm:max-w-xs cursor-pointer font-[inherit]">
+                <option value="user">Usuário</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" id="btn-user-create" class="mt-4 btn-save text-sm py-2.5 px-5">Adicionar usuário</button>
+        </div>
+      </div>
+      </div>
+
+      <!-- Modal editar usuário -->
+      <div id="user-edit-modal" class="fixed inset-0 z-[10001] hidden items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+          <button type="button" id="user-edit-close" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl leading-none bg-transparent border-0 cursor-pointer font-[inherit]">&times;</button>
+          <h3 class="text-lg font-bold text-gray-900 mb-1">Editar usuário</h3>
+          <p class="text-sm text-gray-500 mb-4" id="user-edit-label"></p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Nova senha (opcional)</label>
+              <input type="password" id="user-edit-password" class="url-input mt-0 py-2 text-sm w-full" placeholder="Deixe vazio para não alterar" autocomplete="new-password" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Perfil</label>
+              <select id="user-edit-role" class="url-input py-2 text-sm w-full cursor-pointer font-[inherit]">
+                <option value="user">Usuário</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 mt-6">
+            <button type="button" id="user-edit-cancel" class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 font-[inherit] cursor-pointer bg-white">Cancelar</button>
+            <button type="button" id="user-edit-save" class="btn-save text-sm py-2 px-5">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-backup" class="settings-panel hidden flex flex-col gap-5">
       <!-- Card: Backup -->
       <div class="settings-card">
         <div class="card-title">
@@ -473,7 +593,9 @@
           </button>
         </div>
       </div>
+      </div>
 
+      <div id="panel-audit" class="settings-panel hidden flex flex-col gap-5">
       <!-- Card: Logs de Auditoria -->
       <div class="settings-card" style="animation-delay:.15s">
         <div class="card-title">
@@ -516,8 +638,9 @@
           </div>
         </div>
       </div>
+      </div>
 
-      <div id="save-status" class="text-sm text-gray-400 text-center"></div>
+      <div id="save-status" class="text-sm text-gray-400 text-center mt-2"></div>
 
     </div>
   </main>
@@ -550,6 +673,40 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
 
   var token = localStorage.getItem('admin_token');
   if (!token) { window.location.href = '/login'; return; }
+
+  var SETTINGS_TABS_WITH_SAVE = ['identity', 'chat', 'site'];
+
+  function setSettingsTab(tab) {
+    var subt = document.getElementById('settings-page-subtitle');
+    document.querySelectorAll('.settings-tab').forEach(function (b) {
+      var t = b.getAttribute('data-tab');
+      b.classList.toggle('active', t === tab);
+      if (t === tab && subt && b.getAttribute('data-subtitle')) {
+        subt.textContent = b.getAttribute('data-subtitle');
+      }
+    });
+    document.querySelectorAll('.settings-panel').forEach(function (p) {
+      var id = p.id.replace('panel-', '');
+      p.classList.toggle('hidden', id !== tab);
+    });
+    var wrap = document.getElementById('header-save-wrap');
+    if (wrap) wrap.classList.toggle('hidden', SETTINGS_TABS_WITH_SAVE.indexOf(tab) < 0);
+  }
+
+  document.querySelectorAll('.settings-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.getAttribute('data-tab');
+      if (tab) setSettingsTab(tab);
+      try { history.replaceState(null, '', '#' + tab); } catch (e1) {}
+    });
+  });
+
+  (function initSettingsTabFromHash() {
+    var h = (location.hash || '').replace(/^#/, '').trim();
+    var allowed = ['identity', 'chat', 'site', 'users', 'backup', 'audit'];
+    if (h && allowed.indexOf(h) >= 0) setSettingsTab(h);
+    else setSettingsTab('identity');
+  })();
 
   var CT_DEFAULT = {
     primary: '#1c8b3c',
@@ -1150,7 +1307,10 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
     backup_created: 'Backup gerado',
     file_uploaded: 'Arquivo enviado',
     file_updated: 'Arquivo editado',
-    file_deleted: 'Arquivo excluído'
+    file_deleted: 'Arquivo excluído',
+    user_created: 'Usuário criado',
+    user_updated: 'Usuário atualizado',
+    user_deleted: 'Usuário excluído'
   };
 
   function loadLogs() {
@@ -1214,6 +1374,138 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
   });
 
   loadLogs();
+
+  /* --- Usuários do painel --- */
+  var editingUserId = null;
+  function showUserModal(show) {
+    var m = document.getElementById('user-edit-modal');
+    if (!m) return;
+    if (show) {
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    } else {
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+      editingUserId = null;
+    }
+  }
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function loadUsers() {
+    fetch('/admin/users', { headers: authHeaders() })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
+      .then(function (rows) {
+        var body = document.getElementById('users-table-body');
+        if (!rows || rows.length === 0) {
+          body.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Nenhum usuário</td></tr>';
+          return;
+        }
+        var html = '';
+        rows.forEach(function (u) {
+          var roleLabel = u.role === 'admin' ? 'Administrador' : 'Usuário';
+          var actionsTd;
+          if (u.managed_by_env) {
+            actionsTd = '<td class="px-4 py-3 text-right"><span class="inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg" title="Use ADMIN_USERNAME e ADMIN_PASSWORD no arquivo .env">Definido no .env</span></td>';
+          } else {
+            actionsTd = '<td class="px-4 py-3 text-right space-x-2"><button type="button" class="text-sm font-semibold text-brand-700 hover:underline bg-transparent border-0 cursor-pointer font-[inherit] btn-user-edit" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '" data-role="' + escapeHtml(u.role) + '">Editar</button> <button type="button" class="text-sm font-semibold text-red-600 hover:underline bg-transparent border-0 cursor-pointer font-[inherit] btn-user-del" data-id="' + u.id + '" data-username="' + escapeHtml(u.username) + '">Excluir</button></td>';
+          }
+          html += '<tr class="border-b border-gray-100"><td class="px-4 py-3 font-medium text-gray-900">' + escapeHtml(u.username) + '</td><td class="px-4 py-3 text-gray-600">' + roleLabel + '</td>' + actionsTd + '</tr>';
+        });
+        body.innerHTML = html;
+        body.querySelectorAll('.btn-user-edit').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            editingUserId = parseInt(btn.getAttribute('data-id'), 10);
+            document.getElementById('user-edit-label').textContent = btn.getAttribute('data-username') || '';
+            document.getElementById('user-edit-password').value = '';
+            document.getElementById('user-edit-role').value = btn.getAttribute('data-role') || 'user';
+            showUserModal(true);
+          });
+        });
+        body.querySelectorAll('.btn-user-del').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var uname = btn.getAttribute('data-username') || '';
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            if (!confirm('Excluir o usuário "' + uname + '"?')) return;
+            fetch('/admin/users/' + id, { method: 'DELETE', headers: authHeaders() })
+              .then(function (r) {
+                if (r.status === 204) {
+                  showToast('Usuário removido', 'success');
+                  loadUsers();
+                  return;
+                }
+                return r.json().then(function (d) {
+                  throw new Error(typeof d.detail === 'string' ? d.detail : (Array.isArray(d.detail) ? d.detail.map(function (x) { return x.msg || x; }).join(' ') : 'Erro'));
+                });
+              })
+              .catch(function (e) { showToast(e.message || 'Erro ao excluir', 'error'); });
+          });
+        });
+      })
+      .catch(function () {
+        var body = document.getElementById('users-table-body');
+        if (body) body.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">Erro ao carregar usuários</td></tr>';
+      });
+  }
+  document.getElementById('btn-user-create').addEventListener('click', function () {
+    var name = (document.getElementById('new-user-name').value || '').trim();
+    var pass = document.getElementById('new-user-pass').value;
+    var role = document.getElementById('new-user-role').value;
+    if (!name || !pass) {
+      showToast('Preencha usuário e senha', 'error');
+      return;
+    }
+    fetch('/admin/users', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ username: name, password: pass, role: role })
+    })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (d) {
+            throw new Error(typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail));
+          });
+        }
+        return r.json();
+      })
+      .then(function () {
+        showToast('Usuário criado', 'success');
+        document.getElementById('new-user-name').value = '';
+        document.getElementById('new-user-pass').value = '';
+        loadUsers();
+      })
+      .catch(function (e) { showToast(e.message || 'Erro', 'error'); });
+  });
+  document.getElementById('user-edit-close').addEventListener('click', function () { showUserModal(false); });
+  document.getElementById('user-edit-cancel').addEventListener('click', function () { showUserModal(false); });
+  document.getElementById('user-edit-save').addEventListener('click', function () {
+    if (!editingUserId) return;
+    var pwd = document.getElementById('user-edit-password').value;
+    var role = document.getElementById('user-edit-role').value;
+    var payload = { role: role };
+    if (pwd) payload.password = pwd;
+    fetch('/admin/users/' + editingUserId, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (d) {
+            throw new Error(typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail));
+          });
+        }
+        return r.json();
+      })
+      .then(function () {
+        showToast('Usuário atualizado', 'success');
+        showUserModal(false);
+        loadUsers();
+      })
+      .catch(function (e) { showToast(e.message || 'Erro', 'error'); });
+  });
+  loadUsers();
 })();
 </script>
 

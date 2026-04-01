@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, files, chat, admin, pages, public_files, conversations, branding
+from app.routers import auth, files, chat, admin, pages, public_files, conversations, branding, users
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils import validate_openai_connection
 from app.openai_status import set_status
@@ -104,34 +104,49 @@ async def startup_event():
     
     init_db()
     logger.info("Banco de dados inicializado")
-    
-    # Garante hash bcrypt da senha admin no banco
+
+    # Usuários do painel: primeiro admin vem do .env; depois gestão em /settings
     try:
         from sqlalchemy.exc import IntegrityError
         from app.database import SessionLocal
-        from app.utils import get_setting, set_setting
-        from app.auth import get_password_hash, verify_password
+        from app.models import UserModel
+        from app.auth import ROLE_ADMIN, get_password_hash, verify_password
+
         db = SessionLocal()
         try:
-            existing_hash = get_setting(db, "admin_password_hash")
-            if not existing_hash:
+            n = db.query(UserModel).count()
+            if n == 0:
                 hashed = get_password_hash(settings.ADMIN_PASSWORD)
-                set_setting(db, "admin_password_hash", hashed)
-                logger.info("Hash bcrypt da senha admin gerado e armazenado no banco")
+                db.add(
+                    UserModel(
+                        username=settings.ADMIN_USERNAME,
+                        password_hash=hashed,
+                        role=ROLE_ADMIN,
+                    )
+                )
+                db.commit()
+                logger.info(
+                    "Usuário administrador inicial criado (ADMIN_USERNAME / ADMIN_PASSWORD do .env)"
+                )
             else:
-                if not verify_password(settings.ADMIN_PASSWORD, existing_hash):
-                    new_hash = get_password_hash(settings.ADMIN_PASSWORD)
-                    set_setting(db, "admin_password_hash", new_hash)
-                    logger.info("Senha admin alterada no .env — hash bcrypt regenerado")
-                else:
-                    logger.info("Hash bcrypt da senha admin OK")
+                admin_user = (
+                    db.query(UserModel)
+                    .filter(UserModel.username == settings.ADMIN_USERNAME)
+                    .first()
+                )
+                if admin_user and not verify_password(settings.ADMIN_PASSWORD, admin_user.password_hash):
+                    admin_user.password_hash = get_password_hash(settings.ADMIN_PASSWORD)
+                    db.commit()
+                    logger.info(
+                        "Senha do usuário %s sincronizada a partir do .env",
+                        settings.ADMIN_USERNAME,
+                    )
         finally:
             db.close()
     except IntegrityError:
-        # Outro worker já inseriu admin_password_hash (múltiplos workers)
-        logger.info("Hash da senha admin já definido por outro processo")
+        logger.info("Usuário admin inicial já criado por outro processo")
     except Exception as e:
-        logger.warning("Não foi possível inicializar hash da senha no banco: %s", e)
+        logger.warning("Bootstrap de usuários: %s", e)
     
     # Garante diretórios de upload
     try:
@@ -158,6 +173,7 @@ app.include_router(files.router)
 app.include_router(public_files.router)  # Arquivos públicos (sem auth)
 app.include_router(chat.router)
 app.include_router(admin.router)
+app.include_router(users.router)
 app.include_router(conversations.router)
 app.include_router(branding.router)
 app.include_router(pages.router)
